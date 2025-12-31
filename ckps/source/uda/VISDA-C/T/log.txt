@@ -1,0 +1,46 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:10
+batch_size:64
+worker:4
+dset:VISDA-C
+lr:0.001
+net:resnet101
+seed:2022
+bottleneck:256
+epsilon:1e-05
+layer:wn
+classifier:bn
+smooth:0.1
+output:ckps/source/
+da:uda
+trte:val
+class_num:12
+s_dset_path:data/VISDA-C/train_list.txt
+test_dset_path:data/VISDA-C/validation_list.txt
+output_dir_src:ckps/source/uda/VISDA-C/T
+name_src:T
+out_file:<_io.TextIOWrapper name='ckps/source/uda/VISDA-C/T/log.txt' mode='w' encoding='UTF-8'>
+
+Task: T, Iter:2144/21440; Accuracy = 97.62%
+99.8 99.72 98.19 95.8 99.57 98.72 98.85 99.33 99.82 99.34 92.28 90.02
+Task: T, Iter:4288/21440; Accuracy = 98.41%
+99.73 99.72 98.25 96.42 99.68 99.15 99.19 99.83 99.82 99.26 96.08 93.8
+Task: T, Iter:6432/21440; Accuracy = 98.81%
+99.86 99.72 98.67 95.96 99.79 99.57 99.6 99.66 99.82 99.43 97.15 96.53
+Task: T, Iter:8576/21440; Accuracy = 99.05%
+99.93 99.72 98.43 96.58 99.79 99.43 99.77 99.75 99.82 99.67 97.66 98.11
+Task: T, Iter:10720/21440; Accuracy = 99.02%
+100.0 99.72 98.55 97.98 99.79 99.5 99.77 99.75 99.82 99.92 98.54 94.96
+Task: T, Iter:12864/21440; Accuracy = 99.21%
+99.86 99.72 98.43 98.06 99.79 99.57 99.77 99.75 99.82 99.92 98.61 97.27
+Task: T, Iter:15008/21440; Accuracy = 99.32%
+100.0 99.72 98.79 98.52 99.79 99.64 99.88 99.92 99.82 99.67 98.67 97.37
+Task: T, Iter:17152/21440; Accuracy = 99.35%
+100.0 99.72 98.31 98.06 99.79 99.79 99.83 99.92 99.82 99.92 98.8 98.21
+Task: T, Iter:19296/21440; Accuracy = 99.43%
+100.0 100.0 98.55 98.52 99.79 99.79 99.83 99.92 99.82 99.92 98.92 98.11
+Task: T, Iter:21440/21440; Accuracy = 99.43%
+100.0 99.86 99.21 97.74 99.79 99.86 99.88 99.83 99.82 99.92 98.54 98.74

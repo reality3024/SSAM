@@ -1,0 +1,36 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:10
+batch_size:64
+worker:4
+dset:M58
+lr:0.001
+net:resnet101
+seed:2022
+bottleneck:256
+epsilon:1e-05
+layer:wn
+classifier:bn
+smooth:0.1
+output:ckps/source/
+da:uda
+trte:val
+class_num:10
+s_dset_path:data/M58/CAD_ratioFilter_similar_10_list.txt
+test_dset_path:data/M58/Real_all_nobg_augmented_similar_10_list.txt
+output_dir_src:ckps/source/uda/M58/C
+name_src:C
+out_file:<_io.TextIOWrapper name='ckps/source/uda/M58/C/log.txt' mode='w' encoding='UTF-8'>
+
+Task: C, Iter:31/310; Accuracy = 81.45%
+Task: C, Iter:62/310; Accuracy = 89.59%
+Task: C, Iter:93/310; Accuracy = 93.21%
+Task: C, Iter:124/310; Accuracy = 95.02%
+Task: C, Iter:155/310; Accuracy = 95.02%
+Task: C, Iter:186/310; Accuracy = 96.38%
+Task: C, Iter:217/310; Accuracy = 95.48%
+Task: C, Iter:248/310; Accuracy = 96.38%
+Task: C, Iter:279/310; Accuracy = 97.29%
+Task: C, Iter:310/310; Accuracy = 97.29%

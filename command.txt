@@ -1,0 +1,81 @@
+Pretrained Model:
+    VisDA-C: 
+        python image_source.py \
+        --trte val \
+        --output ckps/source/ \
+        --da uda \
+        --gpu_id 0 \
+        --dset VISDA-C \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 10 \
+        --s 0
+    M58:
+        python image_source.py \
+        --trte val \
+        --output ckps/source/ \
+        --da uda \
+        --gpu_id 0 \
+        --dset M58 \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 10 \
+        --s 0
+Adaptation:
+    VisDA-C:
+        python image_target.py \
+        --cls_par 0.3 \
+        --da uda \
+        --dset VISDA-C \
+        --gpu_id 0 \
+        --s 0 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net resnet101 \
+        --lr 1e-3
+    VisDA-C (contrast feature learning):
+        python contrast_feature_micro.py \
+        --cls_par 0.3 \
+        --bn \
+        --plabel \
+        --da uda \
+        --dset VISDA-C \
+        --gpu_id 0 \
+        --s 0 \
+        --t 1 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 20 \
+        --batch_size 64 \
+        --accumulation_steps 2
+    M58 (standard):
+        python image_target.py \
+        --cls_par 0.3 \
+        --da uda \
+        --dset M58 \
+        --gpu_id 0 \
+        --s 0 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 20
+    M58 (contrast feature learning):
+        python contrast_feature_micro.py \
+        --cls_par 0.3 \
+        --bn \
+        --plabel \
+        --da uda \
+        --dset M58 \
+        --gpu_id 0 \
+        --s 0 \
+        --t 1 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 20 \
+        --batch_size 64 \
+        --accumulation_steps 2

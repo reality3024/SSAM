@@ -1,0 +1,83 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:20
+interval:20
+batch_size:64
+worker:4
+dset:M58
+lr:0.001
+net:resnet101
+seed:2022
+gent:True
+ent:True
+bn:True
+plabel:True
+cls_par:0.3
+ent_par:1.0
+bn_par:1.0
+lr_decay1:0.1
+lr_decay2:1.0
+T:1.0
+tt:1.0
+accumulation_steps:2
+bottleneck:256
+epsilon:1e-05
+layer:wn
+classifier:bn
+distance:cosine
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+issave:True
+class_num:10
+s_dset_path:data/M58/CAD_ratioFilter_similar_10_list.txt
+t_dset_path:data/M58/Real_all_nobg_augmented_similar_10_list.txt
+test_dset_path:data/M58/Real_all_nobg_augmented_similar_10_list.txt
+output_dir_src:ckps/source/uda/M58/C
+output_dir:ckps/target/uda/M58/CR11-27_15:34
+name:CR
+savename:cls_par_0.3
+out_file:<_io.TextIOWrapper name='ckps/target/uda/M58/CR11-27_15:34/log_cls_par_0.3.txt' mode='w' encoding='UTF-8'>
+
+Accuracy = 17.65% -> 27.70%
+Epoch: 1/20, Accuracy = 24.80%
+Accuracy = 24.80% -> 26.20%
+Epoch: 2/20, Accuracy = 25.95%
+Accuracy = 25.95% -> 25.95%
+Epoch: 3/20, Accuracy = 27.35%
+Accuracy = 27.35% -> 27.25%
+Epoch: 4/20, Accuracy = 27.80%
+Accuracy = 27.80% -> 27.25%
+Epoch: 5/20, Accuracy = 26.95%
+Accuracy = 26.95% -> 27.30%
+Epoch: 6/20, Accuracy = 28.55%
+Accuracy = 28.55% -> 28.70%
+Epoch: 7/20, Accuracy = 28.25%
+Accuracy = 28.25% -> 27.95%
+Epoch: 8/20, Accuracy = 29.85%
+Accuracy = 29.85% -> 30.45%
+Epoch: 9/20, Accuracy = 27.70%
+Accuracy = 27.70% -> 28.15%
+Epoch: 10/20, Accuracy = 29.55%
+Accuracy = 29.55% -> 29.40%
+Epoch: 11/20, Accuracy = 27.85%
+Accuracy = 27.85% -> 28.25%
+Epoch: 12/20, Accuracy = 28.50%
+Accuracy = 28.50% -> 28.60%
+Epoch: 13/20, Accuracy = 31.00%
+Accuracy = 31.00% -> 31.45%
+Epoch: 14/20, Accuracy = 30.85%
+Accuracy = 30.85% -> 31.75%
+Epoch: 15/20, Accuracy = 31.55%
+Accuracy = 31.55% -> 31.85%
+Epoch: 16/20, Accuracy = 31.35%
+Accuracy = 31.35% -> 32.05%
+Epoch: 17/20, Accuracy = 31.50%
+Accuracy = 31.50% -> 31.85%
+Epoch: 18/20, Accuracy = 30.70%
+Accuracy = 30.70% -> 32.10%
+Epoch: 19/20, Accuracy = 32.20%
+Accuracy = 32.20% -> 33.05%
+Epoch: 20/20, Accuracy = 30.70%

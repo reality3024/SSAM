@@ -1,0 +1,83 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:15
+interval:15
+batch_size:64
+worker:4
+dset:VISDA-C
+lr:0.001
+net:resnet101
+seed:2022
+gent:True
+ent:True
+threshold:0
+cls_par:0.3
+ent_par:1.0
+lr_decay1:0.1
+lr_decay2:1.0
+bottleneck:256
+epsilon:1e-05
+layer:wn
+classifier:bn
+distance:cosine
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+issave:False
+class_num:12
+s_dset_path:data/VISDA-C/train_list.txt
+t_dset_path:data/VISDA-C/validation_list.txt
+test_dset_path:data/VISDA-C/validation_list.txt
+output_dir_src:ckps/source/uda/VISDA-C/T
+output_dir:ckps/target/uda/VISDA-C/TV11-17_22:28
+name:TV
+savename:cls_par_0.30
+out_file:<_io.TextIOWrapper name='ckps/target/uda/VISDA-C/TV11-17_22:28/log_cls_par_0.30.txt' mode='w' encoding='UTF-8'>
+
+Accuracy = 53.06% -> 59.69%
+Task: TV, Iter:866/12990; Accuracy = 81.31%
+94.57 80.49 80.28 57.8 92.41 93.98 86.16 79.4 86.13 86.23 83.88 54.36
+Accuracy = 77.51% -> 77.41%
+Task: TV, Iter:1732/12990; Accuracy = 81.87%
+94.62 83.37 78.98 58.11 91.96 95.33 85.32 80.62 87.25 86.67 84.02 56.16
+Accuracy = 77.96% -> 77.76%
+Task: TV, Iter:2598/12990; Accuracy = 82.11%
+94.27 82.39 81.17 58.46 93.03 95.28 85.39 80.2 87.45 87.64 85.65 54.45
+Accuracy = 78.20% -> 78.07%
+Task: TV, Iter:3464/12990; Accuracy = 82.19%
+94.51 84.43 80.36 57.5 93.29 95.23 84.89 80.8 88.02 87.9 86.0 53.39
+Accuracy = 78.08% -> 77.93%
+Task: TV, Iter:4330/12990; Accuracy = 82.10%
+94.6 86.91 80.41 58.1 93.33 95.33 82.25 80.75 88.24 87.9 84.8 52.58
+Accuracy = 77.93% -> 77.74%
+Task: TV, Iter:5196/12990; Accuracy = 82.14%
+94.43 87.34 79.17 58.36 93.05 94.99 82.23 80.62 88.52 88.69 84.21 54.13
+Accuracy = 78.01% -> 77.79%
+Task: TV, Iter:6062/12990; Accuracy = 82.07%
+94.49 87.8 80.41 56.22 93.11 95.23 80.33 80.7 89.29 88.29 83.99 55.01
+Accuracy = 77.68% -> 77.48%
+Task: TV, Iter:6928/12990; Accuracy = 82.21%
+94.9 87.51 79.06 56.27 93.67 94.31 80.66 80.3 89.16 89.35 84.7 56.65
+Accuracy = 77.86% -> 77.62%
+Task: TV, Iter:7794/12990; Accuracy = 82.21%
+94.71 86.65 79.68 56.19 92.97 95.04 82.0 80.18 89.27 89.48 85.88 54.54
+Accuracy = 77.82% -> 77.52%
+Task: TV, Iter:8660/12990; Accuracy = 82.35%
+94.57 87.25 80.13 57.56 93.75 95.37 81.14 80.3 87.84 89.0 85.72 55.53
+Accuracy = 78.09% -> 77.84%
+Task: TV, Iter:9526/12990; Accuracy = 82.15%
+94.57 87.63 80.26 55.87 93.35 95.33 79.23 80.77 89.87 88.56 86.28 54.13
+Accuracy = 77.66% -> 77.40%
+Task: TV, Iter:10392/12990; Accuracy = 82.50%
+94.43 87.65 80.36 55.24 93.71 95.08 81.33 80.47 88.7 89.22 86.17 57.62
+Accuracy = 78.03% -> 77.79%
+Task: TV, Iter:11258/12990; Accuracy = 82.42%
+94.08 86.91 78.23 55.53 93.71 94.07 81.0 80.8 89.05 89.87 87.54 58.27
+Accuracy = 78.02% -> 77.74%
+Task: TV, Iter:12124/12990; Accuracy = 82.32%
+94.38 88.46 78.57 53.99 93.78 94.75 79.16 80.08 90.02 89.57 86.5 58.63
+Accuracy = 77.68% -> 77.46%
+Task: TV, Iter:12990/12990; Accuracy = 82.57%
+94.54 88.55 78.93 55.68 93.82 94.51 79.62 80.55 90.24 89.39 86.52 58.45

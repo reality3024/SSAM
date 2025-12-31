@@ -1,0 +1,68 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:15
+interval:15
+batch_size:64
+worker:4
+dset:M58
+lr:0.001
+net:resnet101
+seed:2022
+gent:True
+ent:True
+threshold:0
+cls_par:0.3
+ent_par:1.0
+lr_decay1:0.1
+lr_decay2:1.0
+bottleneck:256
+epsilon:1e-05
+layer:wn
+classifier:bn
+distance:cosine
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+issave:True
+class_num:79
+s_dset_path:data/M58/CAD_ratioFilter_79_list.txt
+t_dset_path:data/M58/Real_all_nobg_augmented_79_list.txt
+test_dset_path:data/M58/Real_all_nobg_augmented_79_list.txt
+output_dir_src:ckps/source/uda/M58/C
+output_dir:ckps/target/uda/M58/CR11-18_15:04
+name:CR
+savename:cls_par_0.30
+out_file:<_io.TextIOWrapper name='ckps/target/uda/M58/CR11-18_15:04/log_cls_par_0.30.txt' mode='w' encoding='UTF-8'>
+
+Accuracy = 13.17% -> 17.45%
+Task: CR, Iter:247/3705; Accuracy = 19.11% (New Best!)
+Accuracy = 19.11% -> 20.75%
+Task: CR, Iter:494/3705; Accuracy = 19.26% (New Best!)
+Accuracy = 19.26% -> 20.19%
+Task: CR, Iter:741/3705; Accuracy = 19.97% (New Best!)
+Accuracy = 19.97% -> 19.96%
+Task: CR, Iter:988/3705; Accuracy = 20.11% (New Best!)
+Accuracy = 20.11% -> 19.84%
+Task: CR, Iter:1235/3705; Accuracy = 20.29% (New Best!)
+Accuracy = 20.29% -> 1.27%
+Task: CR, Iter:1482/3705; Accuracy = 19.96%
+Accuracy = 19.96% -> 19.61%
+Task: CR, Iter:1729/3705; Accuracy = 19.84%
+Accuracy = 19.84% -> 19.55%
+Task: CR, Iter:1976/3705; Accuracy = 19.91%
+Accuracy = 19.91% -> 19.64%
+Task: CR, Iter:2223/3705; Accuracy = 19.94%
+Accuracy = 19.94% -> 19.63%
+Task: CR, Iter:2470/3705; Accuracy = 19.89%
+Accuracy = 19.89% -> 19.81%
+Task: CR, Iter:2717/3705; Accuracy = 19.99%
+Accuracy = 19.99% -> 19.74%
+Task: CR, Iter:2964/3705; Accuracy = 19.78%
+Accuracy = 19.78% -> 19.61%
+Task: CR, Iter:3211/3705; Accuracy = 19.78%
+Accuracy = 19.78% -> 19.67%
+Task: CR, Iter:3458/3705; Accuracy = 19.79%
+Accuracy = 19.79% -> 19.70%
+Task: CR, Iter:3705/3705; Accuracy = 19.80%

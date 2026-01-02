@@ -211,7 +211,7 @@ class ShotHook():
 
         klc = 0.0
         for i in range(mean.size()[0]):
-            klc += calculate_gaussian_kl_divergence(self.mean_orignal[i], mean[i], self.var_orignal[i], var[i])
+            klc += calculate_gaussian_kl_divergence(self.mean_orignal[i], mean[i], self.var_orignal[i], var[i]) # Equation 9
         r_feature = klc / mean.size()[0]
 
         self.r_feature = r_feature
@@ -238,12 +238,12 @@ def train_target(args):
 
     modelpath = args.output_dir_src + '/source_F.pt'
     netF_orignal.load_state_dict(torch.load(modelpath))
-    netF.load_state_dict(torch.load(modelpath))
+    netF.load_state_dict(torch.load(modelpath)) # Backbone/Encoder: Extract Features
     modelpath = args.output_dir_src + '/source_B.pt'
-    netB.load_state_dict(torch.load(modelpath))
+    netB.load_state_dict(torch.load(modelpath)) # Bottleneck Layer
     netB_orignal.load_state_dict(torch.load(modelpath))
     modelpath = args.output_dir_src + '/source_C.pt'
-    netC.load_state_dict(torch.load(modelpath))
+    netC.load_state_dict(torch.load(modelpath)) # Classifier
     netC.eval()
     for k, v in netC.named_parameters():
         v.requires_grad = False
@@ -302,7 +302,7 @@ def train_target(args):
             (inputs_test, inputs_s), _, tar_idx, path = next(iter_test)
         except:
             iter_test = iter(dset_loaders["target"])
-            (inputs_test, inputs_s), _, tar_idx, path = next(iter_test)
+            (inputs_test, inputs_s), _, tar_idx, path = next(iter_test) # inputs_test: weakly augmented target image, inputs_s: strongly augmented target image
 
         if inputs_test.size(0) == 1:
             continue
@@ -323,7 +323,7 @@ def train_target(args):
         # Move to GPU
         inputs_test = inputs_test.cuda()
         inputs_s = inputs_s.cuda()
-        mas = weight[tar_idx].cuda()
+        mas = weight[tar_idx].cuda() # weight for contrastive loss
         
         # Accumulate gradients over micro batches
         total_loss = 0
@@ -351,19 +351,20 @@ def train_target(args):
                 torch.cuda.empty_cache()
             
             # Process strong augmentation
-            features_s = netB(netF(micro_inputs_s))
+            features_s = netB(netF(micro_inputs_s)) # strongly augmented features (without softmax logits)
             out_2 = F.normalize(features_s, dim=-1)
 
             # Setup BN hooks for micro batch
             loss_bn_layers = []
             if args.bn:
                 i, j = 0, 0
+                # module1 from target model, module2 from source model
                 for module1 in netF.modules():
                     i += 1
                     for module2 in netF_orignal.modules():
                         j += 1
                         if isinstance(module1, nn.BatchNorm2d) and i == j:
-                            loss_bn_layers.append(ShotHook(module1, module2))
+                            loss_bn_layers.append(ShotHook(module1, module2)) # ShotHook fetch source/target model's BN statistics
                     j = 0
                 for module1 in netB.modules():
                     for module2 in netB_orignal.modules():
@@ -373,14 +374,14 @@ def train_target(args):
             # Process weak augmentation
             features_test = netB(netF(micro_inputs_test))
             out_1 = F.normalize(features_test, dim=-1)
-            outputs_test = netC(features_test)
+            outputs_test = netC(features_test) # weakly augmented Classifier outputs 
 
             # Calculate losses for micro batch
             losses = torch.tensor(0.0).cuda()
             
             # BN loss
             if args.bn and loss_bn_layers:
-                bn_loss = sum([mod.r_feature for mod in loss_bn_layers]) / len(loss_bn_layers)
+                bn_loss = sum([mod.r_feature for mod in loss_bn_layers]) / len(loss_bn_layers) # r_feature from ShotHook KL Divergence
                 bn_loss *= args.bn_par
                 losses += bn_loss
             
@@ -391,10 +392,10 @@ def train_target(args):
             # Classifier loss
             classifier_loss = torch.tensor(0.0).cuda()
             if args.cls_par > 0 and args.plabel:
-                pred = softpred[micro_tar_idx]
-                x = F.log_softmax(outputs_test, 1)
-                y = F.softmax(pred, 1)
-                classifier_loss = nn.KLDivLoss()(x, y) #Loss CLU
+                pred = softpred[micro_tar_idx] # output logits from target model
+                x = F.log_softmax(outputs_test, 1) # Log softmax of weakly augmented outputs
+                y = F.softmax(pred, 1) # Soft pseudo labels
+                classifier_loss = nn.KLDivLoss()(x, y) # Equation 5 Loss CLU
                 classifier_loss *= args.cls_par
                 if iter_num < interval_iter and args.dset == "VISDA-C":
                     classifier_loss *= 0
@@ -404,25 +405,28 @@ def train_target(args):
             im_loss = torch.tensor(0.0).cuda()
             if args.ent:
                 softmax_out = nn.Softmax(dim=1)(outputs_test)
-                entropy_loss = torch.mean(loss.Entropy(softmax_out))
+                entropy_loss = torch.mean(loss.Entropy(softmax_out)) # Equation 1 Loss ent
                 if args.gent:
                     msoftmax = softmax_out.mean(dim=0)
-                    gentropy_loss = torch.sum(-msoftmax * torch.log(msoftmax + args.epsilon))
+                    gentropy_loss = torch.sum(-msoftmax * torch.log(msoftmax + args.epsilon)) # Equation 2 Loss div
                     entropy_loss -= gentropy_loss
                 im_loss = entropy_loss * args.ent_par
                 losses += im_loss
 
             # Contrastive loss
-            out = torch.cat([out_1, out_2], dim=0)
-            sim_matrix = torch.exp(torch.mm(out, out.t().contiguous()) / args.tt)
-            mask = (torch.ones_like(sim_matrix) - torch.eye(out.shape[0], device=sim_matrix.device)).bool()
-            sim_matrix = sim_matrix.masked_select(mask).view(out.shape[0], -1)
+            out = torch.cat([out_1, out_2], dim=0) # out_1 : weakly augmented features, out_2 : strongly augmented features
+            sim_matrix = torch.exp(torch.mm(out, out.t().contiguous()) / args.tt) # (2N x D) ▪ (D x 2N) -> 2N x 2N similarity matrix
+            # ones_like: matrix of all ones with same shape as sim_matrix
+            # torch.eye: identity matrix (對角線為1，其餘為0)
+            # 目的: 建立一個對角線為0，其餘為1的mask矩陣，以去除自我相似度的影響
+            mask = (torch.ones_like(sim_matrix) - torch.eye(out.shape[0], device=sim_matrix.device)).bool() # Mask to remove self-similarity
+            sim_matrix = sim_matrix.masked_select(mask).view(out.shape[0], -1) # Lower Equation 10, Reshape from 2N to (2N-1) without self-similarity
 
-            pos_sim = torch.exp(torch.sum(out_1 * out_2, dim=-1) / args.tt)
-            pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
-            micro_mas_expanded = torch.cat([micro_mas, micro_mas])
+            pos_sim = torch.exp(torch.sum(out_1 * out_2, dim=-1) / args.tt)  # Upper Equation 10
+            pos_sim = torch.cat([pos_sim, pos_sim], dim=0) # To match 2N size since simCLR calculates Week -> Strong and Strong -> Week
+            micro_mas_expanded = torch.cat([micro_mas, micro_mas]) # Weighting for each sample
 
-            contrast_loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1)) * micro_mas_expanded).mean()
+            contrast_loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1)) * micro_mas_expanded).mean() # Equation 12 Loss con
             losses += contrast_loss
             
             # Accumulate individual losses for epoch logging
@@ -568,7 +572,7 @@ def obtain_label(loader, netF, netB, netC, args):
     _, predict = torch.max(all_output, 1)
     entropy = loss.Entropy(all_output)
 
-    weight = 1.0 - torch.exp(-entropy)
+    weight = 1.0 - torch.exp(-entropy) # Equation 11
 
     accuracy = torch.sum(torch.squeeze(predict).float() == all_label).item() / float(all_label.size()[0])
     if args.distance == 'cosine':

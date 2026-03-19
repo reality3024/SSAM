@@ -78,4 +78,81 @@ Adaptation:
         --lr 1e-3 \
         --max_epoch 20 \
         --batch_size 64 \
-        --accumulation_steps 2
+        --accumulation_steps 1
+    M58 (contrast feature learning test):
+        python ssaf_adaptation.py \
+        --cls_par 0.3 \
+        --bn \
+        --plabel \
+        --da uda \
+        --dset M58 \
+        --gpu_id 0 \
+        --s 0 \
+        --t 1 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 20 \
+        --batch_size 64 \
+        --accumulation_steps 1 \
+        --net RN101
+    M58 (contrast feature learning test):
+        python ssaf_adaptation.py \
+        --ent_par 0 \
+        --bn_par 0 \
+        --text_par 0 \
+        --bn \
+        --plabel \
+        --da uda \
+        --dset M58 \
+        --gpu_id 0 \
+        --s 0 \
+        --t 1 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net resnet101 \
+        --lr 1e-3 \
+        --max_epoch 20 \
+        --batch_size 64 \
+        --accumulation_steps 1 \
+        --net RN101
+    M58 (Projector - SSAF original):
+        python ssaf_adaptation_projector.py \
+        --ent_par 1.0 \
+        --text_par 0.5 \
+        --da uda \
+        --dset M58 \
+        --gpu_id 0 \
+        --s 0 \
+        --t 1 \
+        --output_src ckps/source/ \
+        --output ckps/target/ \
+        --net RN101 \
+        --lr 1e-3 \
+        --max_epoch 20 \
+        --batch_size 64 \
+        --accumulation_steps 1 \
+        --text_logitScale 50 \
+        --tt 1.0
+    M58 (Projector - K-Means Pseudo Labeling):
+        # ⚠️ Warmup 機制：第一個 epoch cls_par=0，第二個 epoch 開始使用設定的 cls_par 值
+        python clip_adaptation_projector.py \
+        --da uda \
+        --dset M58 \
+        --gpu_id 0 \
+        --s 0 \
+        --t 1 \
+        --output_src ckps/source/ \
+        --output ckps/adapt/ \
+        --net RN101 \
+        --lr 1e-5 \
+        --max_epoch 5 \
+        --interval 15 \
+        --batch_size 64 \
+        --worker 0 \
+        --cls_par 0.5 \
+        --ent_par 1.0 \
+        --logit_scale 15.0 \
+        --gent True \
+        --ent True

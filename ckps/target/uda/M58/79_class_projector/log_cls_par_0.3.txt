@@ -1,0 +1,165 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:20
+interval:20
+batch_size:64
+worker:4
+dset:M58
+lr:0.001
+net:RN101
+seed:2022
+gent:True
+ent:True
+bn:False
+plabel:False
+cls_par:0.3
+ent_par:1.0
+bn_par:1.0
+lr_decay1:0.1
+lr_decay2:1.0
+T:1.0
+tt:1.0
+accumulation_steps:1
+text_par:0.5
+text_logitScale:50.0
+text_threshold:0.7
+bottleneck:256
+epsilon:1e-05
+layer:wn
+classifier:bn
+distance:cosine
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+issave:True
+class_num:79
+s_dset_path:data/M58/CAD_ratioFilter_79_list.txt
+t_dset_path:data/M58/Real_all_nobg_augmented_79_list.txt
+test_dset_path:data/M58/Real_all_nobg_augmented_79_list.txt
+output_dir_src:ckps/source/uda/M58/C
+output_dir:ckps/target/uda/M58/CR01-29_18:10
+name:CR
+savename:cls_par_0.3
+out_file:<_io.TextIOWrapper name='ckps/target/uda/M58/CR01-29_18:10/log_cls_par_0.3.txt' mode='w' encoding='UTF-8'>
+
+[Text Loss] Iter 0: 通過樣本 0/64 (threshold=0.95), 平均信心: 0.3995
+[Text Loss] Iter 100: 通過樣本 1/64 (threshold=0.95), 平均信心: 0.4451
+  通過樣本的偽標籤準確率: 100.00%
+[Text Loss] Iter 200: 通過樣本 3/64 (threshold=0.95), 平均信心: 0.4664
+  通過樣本的偽標籤準確率: 33.33%
+Epoch: 1/20, Accuracy = 18.83%
+[Text Loss] Iter 300: 通過樣本 4/64 (threshold=0.95), 平均信心: 0.4616
+  通過樣本的偽標籤準確率: 50.00%
+[Text Loss] Iter 400: 通過樣本 1/64 (threshold=0.95), 平均信心: 0.4672
+  通過樣本的偽標籤準確率: 0.00%
+Epoch: 2/20, Accuracy = 19.13%
+[Text Loss] Iter 500: 通過樣本 5/64 (threshold=0.95), 平均信心: 0.5415
+  通過樣本的偽標籤準確率: 40.00%
+[Text Loss] Iter 600: 通過樣本 2/64 (threshold=0.95), 平均信心: 0.5172
+  通過樣本的偽標籤準確率: 50.00%
+[Text Loss] Iter 700: 通過樣本 6/64 (threshold=0.95), 平均信心: 0.4894
+  通過樣本的偽標籤準確率: 66.67%
+Epoch: 3/20, Accuracy = 18.87%
+[Text Loss] Iter 800: 通過樣本 3/64 (threshold=0.95), 平均信心: 0.5500
+  通過樣本的偽標籤準確率: 33.33%
+[Text Loss] Iter 900: 通過樣本 7/64 (threshold=0.95), 平均信心: 0.5351
+  通過樣本的偽標籤準確率: 57.14%
+Epoch: 4/20, Accuracy = 19.04%
+[Text Loss] Iter 1000: 通過樣本 6/64 (threshold=0.95), 平均信心: 0.5133
+  通過樣本的偽標籤準確率: 33.33%
+[Text Loss] Iter 1100: 通過樣本 10/64 (threshold=0.95), 平均信心: 0.5922
+  通過樣本的偽標籤準確率: 50.00%
+[Text Loss] Iter 1200: 通過樣本 14/64 (threshold=0.95), 平均信心: 0.6301
+  通過樣本的偽標籤準確率: 64.29%
+Epoch: 5/20, Accuracy = 18.72%
+[Text Loss] Iter 1300: 通過樣本 13/64 (threshold=0.95), 平均信心: 0.6209
+  通過樣本的偽標籤準確率: 46.15%
+[Text Loss] Iter 1400: 通過樣本 6/64 (threshold=0.95), 平均信心: 0.6036
+  通過樣本的偽標籤準確率: 16.67%
+Epoch: 6/20, Accuracy = 18.69%
+[Text Loss] Iter 1500: 通過樣本 9/64 (threshold=0.95), 平均信心: 0.6110
+  通過樣本的偽標籤準確率: 33.33%
+[Text Loss] Iter 1600: 通過樣本 8/64 (threshold=0.95), 平均信心: 0.6117
+  通過樣本的偽標籤準確率: 50.00%
+[Text Loss] Iter 1700: 通過樣本 14/64 (threshold=0.95), 平均信心: 0.6365
+  通過樣本的偽標籤準確率: 57.14%
+Epoch: 7/20, Accuracy = 18.72%
+[Text Loss] Iter 1800: 通過樣本 15/64 (threshold=0.95), 平均信心: 0.6680
+  通過樣本的偽標籤準確率: 46.67%
+[Text Loss] Iter 1900: 通過樣本 12/64 (threshold=0.95), 平均信心: 0.6301
+  通過樣本的偽標籤準確率: 58.33%
+Epoch: 8/20, Accuracy = 18.75%
+[Text Loss] Iter 2000: 通過樣本 15/64 (threshold=0.95), 平均信心: 0.6504
+  通過樣本的偽標籤準確率: 40.00%
+[Text Loss] Iter 2100: 通過樣本 14/64 (threshold=0.95), 平均信心: 0.6408
+  通過樣本的偽標籤準確率: 7.14%
+[Text Loss] Iter 2200: 通過樣本 20/64 (threshold=0.95), 平均信心: 0.7188
+  通過樣本的偽標籤準確率: 40.00%
+Epoch: 9/20, Accuracy = 18.61%
+[Text Loss] Iter 2300: 通過樣本 13/64 (threshold=0.95), 平均信心: 0.6646
+  通過樣本的偽標籤準確率: 38.46%
+[Text Loss] Iter 2400: 通過樣本 17/64 (threshold=0.95), 平均信心: 0.6989
+  通過樣本的偽標籤準確率: 29.41%
+Epoch: 10/20, Accuracy = 18.61%
+[Text Loss] Iter 2500: 通過樣本 15/64 (threshold=0.95), 平均信心: 0.6974
+  通過樣本的偽標籤準確率: 26.67%
+[Text Loss] Iter 2600: 通過樣本 12/64 (threshold=0.95), 平均信心: 0.6683
+  通過樣本的偽標籤準確率: 41.67%
+[Text Loss] Iter 2700: 通過樣本 18/64 (threshold=0.95), 平均信心: 0.6858
+  通過樣本的偽標籤準確率: 50.00%
+Epoch: 11/20, Accuracy = 18.49%
+[Text Loss] Iter 2800: 通過樣本 18/64 (threshold=0.95), 平均信心: 0.7313
+  通過樣本的偽標籤準確率: 22.22%
+[Text Loss] Iter 2900: 通過樣本 14/64 (threshold=0.95), 平均信心: 0.6627
+  通過樣本的偽標籤準確率: 21.43%
+Epoch: 12/20, Accuracy = 18.42%
+[Text Loss] Iter 3000: 通過樣本 18/64 (threshold=0.95), 平均信心: 0.7080
+  通過樣本的偽標籤準確率: 33.33%
+[Text Loss] Iter 3100: 通過樣本 16/64 (threshold=0.95), 平均信心: 0.7001
+  通過樣本的偽標籤準確率: 25.00%
+[Text Loss] Iter 3200: 通過樣本 19/64 (threshold=0.95), 平均信心: 0.7426
+  通過樣本的偽標籤準確率: 15.79%
+Epoch: 13/20, Accuracy = 18.44%
+[Text Loss] Iter 3300: 通過樣本 17/64 (threshold=0.95), 平均信心: 0.7214
+  通過樣本的偽標籤準確率: 47.06%
+[Text Loss] Iter 3400: 通過樣本 26/64 (threshold=0.95), 平均信心: 0.7516
+  通過樣本的偽標籤準確率: 30.77%
+Epoch: 14/20, Accuracy = 18.42%
+[Text Loss] Iter 3500: 通過樣本 15/64 (threshold=0.95), 平均信心: 0.7044
+  通過樣本的偽標籤準確率: 33.33%
+[Text Loss] Iter 3600: 通過樣本 21/64 (threshold=0.95), 平均信心: 0.7625
+  通過樣本的偽標籤準確率: 33.33%
+[Text Loss] Iter 3700: 通過樣本 22/64 (threshold=0.95), 平均信心: 0.7435
+  通過樣本的偽標籤準確率: 22.73%
+Epoch: 15/20, Accuracy = 18.26%
+[Text Loss] Iter 3800: 通過樣本 15/64 (threshold=0.95), 平均信心: 0.7202
+  通過樣本的偽標籤準確率: 40.00%
+[Text Loss] Iter 3900: 通過樣本 22/64 (threshold=0.95), 平均信心: 0.7298
+  通過樣本的偽標籤準確率: 22.73%
+Epoch: 16/20, Accuracy = 18.44%
+[Text Loss] Iter 4000: 通過樣本 16/64 (threshold=0.95), 平均信心: 0.7437
+  通過樣本的偽標籤準確率: 25.00%
+[Text Loss] Iter 4100: 通過樣本 22/64 (threshold=0.95), 平均信心: 0.7890
+  通過樣本的偽標籤準確率: 13.64%
+Epoch: 17/20, Accuracy = 18.53%
+[Text Loss] Iter 4200: 通過樣本 20/64 (threshold=0.95), 平均信心: 0.7272
+  通過樣本的偽標籤準確率: 45.00%
+[Text Loss] Iter 4300: 通過樣本 23/64 (threshold=0.95), 平均信心: 0.7631
+  通過樣本的偽標籤準確率: 17.39%
+[Text Loss] Iter 4400: 通過樣本 22/64 (threshold=0.95), 平均信心: 0.7819
+  通過樣本的偽標籤準確率: 18.18%
+Epoch: 18/20, Accuracy = 18.44%
+[Text Loss] Iter 4500: 通過樣本 28/64 (threshold=0.95), 平均信心: 0.8000
+  通過樣本的偽標籤準確率: 32.14%
+[Text Loss] Iter 4600: 通過樣本 21/64 (threshold=0.95), 平均信心: 0.7541
+  通過樣本的偽標籤準確率: 28.57%
+Epoch: 19/20, Accuracy = 18.20%
+[Text Loss] Iter 4700: 通過樣本 20/64 (threshold=0.95), 平均信心: 0.7298
+  通過樣本的偽標籤準確率: 35.00%
+[Text Loss] Iter 4800: 通過樣本 18/64 (threshold=0.95), 平均信心: 0.7535
+  通過樣本的偽標籤準確率: 22.22%
+[Text Loss] Iter 4900: 通過樣本 27/64 (threshold=0.95), 平均信心: 0.7823
+  通過樣本的偽標籤準確率: 25.93%
+Epoch: 20/20, Accuracy = 18.08%

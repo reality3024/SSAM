@@ -385,8 +385,8 @@ if __name__ == "__main__":
         names = ['clipar','real','sketch','painting']
         args.class_num = 126
     if args.dset == 'M58':
-        names = ['CAD_ratioFilter', 'Real_all_nobg_augmented']
-        args.class_num = 79
+        names = ['CAD_ratioFilter', 'Real_all_nobg']
+        args.class_num = 37
     
         
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
@@ -404,9 +404,9 @@ if __name__ == "__main__":
 
         folder = 'data/'
         if args.dset == 'M58':
-            args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_79_list.txt'
-            args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_79_list.txt'
-            args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_79_list.txt'
+            args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_37_list.txt'
+            args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_37_list.txt'
+            args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_37_list.txt'
         else:
             args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_list.txt'
             args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_list.txt'

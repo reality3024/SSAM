@@ -1,5 +1,5 @@
 import wandb
-wandb.login()
+# wandb.login()
 
 import argparse
 import os, sys
@@ -166,7 +166,6 @@ def cal_acc(loader, netF, netB, netC, flag=False):
 def calculate_gaussian_kl_divergence(m1, m2, v1, v2):
     return torch.log(v2 / v1) * 0.5 + torch.div(torch.add(v1, torch.square(m1 - m2)), 2 * v2) - 0.5
 
-
 class ShotHook():
     '''
     Implementation of the forward hook to track feature statistics and compute a loss on them.
@@ -236,15 +235,19 @@ def train_target(args):
 
     netC = network.feat_classifier(type=args.layer, class_num=args.class_num, bottleneck_dim=args.bottleneck).cuda()
 
+    # 智能載入 CLIP Source Model 權重（處理架構差異）
     modelpath = args.output_dir_src + '/source_F.pt'
+    netF.load_state_dict(torch.load(modelpath)) # Feature Extractor
     netF_orignal.load_state_dict(torch.load(modelpath))
-    netF.load_state_dict(torch.load(modelpath)) # Backbone/Encoder: Extract Features
+
     modelpath = args.output_dir_src + '/source_B.pt'
     netB.load_state_dict(torch.load(modelpath)) # Bottleneck Layer
     netB_orignal.load_state_dict(torch.load(modelpath))
+
     modelpath = args.output_dir_src + '/source_C.pt'
     netC.load_state_dict(torch.load(modelpath)) # Classifier
     netC.eval()
+
     for k, v in netC.named_parameters():
         v.requires_grad = False
     for k, v in netF_orignal.named_parameters():
@@ -272,9 +275,9 @@ def train_target(args):
     iter_num = 0
     
     # Initialize wandb
-    wandb.init(project="SFDA", 
-               name=f"ATSSL_{args.dset}_{args.s}_to_{args.t}",
-               config=vars(args))
+    # wandb.init(project="SFDA", 
+    #            name=f"ATSSL_{args.dset}_{args.s}_to_{args.t}",
+    #            config=vars(args))
     
     # Calculate micro batch size for memory efficiency
     micro_batch_size = args.batch_size // args.accumulation_steps
@@ -481,16 +484,16 @@ def train_target(args):
                     current_epoch+1, args.max_epoch, avg_total_loss, avg_bn_loss, avg_classifier_loss, avg_entropy_loss, avg_contrast_loss, acc_s_te))
             
             # Log to wandb once per epoch
-            wandb.log({
-                "epoch": current_epoch + 1,
-                "avg_total_loss": avg_total_loss,
-                "avg_bn_loss": avg_bn_loss,
-                "avg_clu_loss": avg_classifier_loss,
-                "avg_im_loss": avg_entropy_loss,
-                "avg_contrast_loss": avg_contrast_loss,
-                "test_accuracy": acc_s_te,
-                "learning_rate": optimizer.param_groups[0]['lr']
-            })
+            # wandb.log({
+            #     "epoch": current_epoch + 1,
+            #     "avg_total_loss": avg_total_loss,
+            #     "avg_bn_loss": avg_bn_loss,
+            #     "avg_clu_loss": avg_classifier_loss,
+            #     "avg_im_loss": avg_entropy_loss,
+            #     "avg_contrast_loss": avg_contrast_loss,
+            #     "test_accuracy": acc_s_te,
+            #     "learning_rate": optimizer.param_groups[0]['lr']
+            # })
             
             args.out_file.write(log_str + '\n')
             args.out_file.flush()
@@ -533,7 +536,7 @@ def train_target(args):
         pbar.close()
     
     # Finish wandb run
-    wandb.finish()
+    # wandb.finish()
     
     return netF, netB, netC
 
@@ -614,7 +617,7 @@ if __name__ == "__main__":
     parser.add_argument('--dset', type=str, default='office-home',
                         choices=['VISDA-C', 'office', 'office-home', 'office-caltech', 'M58'])
     parser.add_argument('--lr', type=float, default=1e-2, help="learning rate")
-    parser.add_argument('--net', type=str, default='resnet50', help="alexnet, vgg16, resnet50, res101")
+    parser.add_argument('--net', type=str, default='resnet101', help="alexnet, vgg16, resnet50, res101")
     parser.add_argument('--seed', type=int, default=2022, help="random seed")
 
     parser.add_argument('--gent', type=bool, default=True)
@@ -654,9 +657,9 @@ if __name__ == "__main__":
         names = ['amazon', 'caltech', 'dslr', 'webcam']
         args.class_num = 10
     if args.dset == 'M58':
-        names = ['CAD_ratioFilter', 'Real_all_nobg_augmented']
-        # args.class_num = 79
-        args.class_num = 30
+        names = ['CAD_ratioFilter', 'Real_all_nobg']
+        args.class_num = 37
+        # args.class_num = 30
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     SEED = args.seed
@@ -667,12 +670,12 @@ if __name__ == "__main__":
 
     folder = 'data/'
     if args.dset == 'M58':
-        # args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_79_list.txt'
-        # args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_79_list.txt'
-        # args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_79_list.txt'
-        args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_hard_30_list.txt'
-        args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_hard_30_list.txt'
-        args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_hard_30_list.txt'
+        args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_37_list.txt'
+        args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_37_list.txt'
+        args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_37_list.txt'
+        # args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_hard_30_list.txt'
+        # args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_hard_30_list.txt'
+        # args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_hard_30_list.txt'
     else:
         args.s_dset_path = folder + args.dset + '/' + names[args.s] + '_list.txt'
         args.t_dset_path = folder + args.dset + '/' + names[args.t] + '_list.txt'
@@ -685,6 +688,7 @@ if __name__ == "__main__":
             args.tar_classes = [i for i in range(25)]
 
     args.output_dir_src = osp.join(args.output_src, args.da, args.dset, names[args.s][0].upper())
+    print("output_dir_src:", args.output_dir_src)
     args.output_dir = osp.join(args.output, args.da, args.dset, names[args.s][0].upper() + names[args.t][
         0].upper() + datetime.datetime.now().strftime("%m-%d_%H:%M"))
     args.name = names[args.s][0].upper() + names[args.t][0].upper()

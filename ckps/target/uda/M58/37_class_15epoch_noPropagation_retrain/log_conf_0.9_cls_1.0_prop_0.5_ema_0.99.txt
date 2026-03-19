@@ -1,0 +1,133 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:15
+interval:20
+batch_size:64
+worker:4
+seed:2021
+dset:M58
+net:RN101
+centroid_logitScale:11.9
+classnames_path:/mnt/backups/andycw/M58/classname37.txt
+centroid_path:/mnt/backups/andycw/UDA-AI/class_centroids_37classes.pth
+projector_path:/mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_37classesFinal/source_projector.pt
+ema_m:0.99
+gent:True
+ent:True
+cls_par:1.0
+prop_par:0.5
+ent_par:1.0
+tt:0.05
+conf_thres:0.9
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+epsilon:1e-05
+lr:0.001
+issave:True
+resume_dir:None
+start_epoch:0
+con_par:1.0
+phase1_epoch:16.0
+class_num:37
+s_dset_path:data/M58/CAD_ratioFilter_37_list.txt
+t_dset_path:data/M58/Real_all_nobg_37_list.txt
+test_dset_path:data/M58/Real_all_nobg_37_list.txt
+output_dir_src:ckps/source/uda/M58/C
+output_dir:ckps/target/uda/M58/CR03-17_20:46
+name:CR
+savename:conf_0.9_cls_1.0_prop_0.5_ema_0.99
+out_file:<_io.TextIOWrapper name='ckps/target/uda/M58/CR03-17_20:46/log_conf_0.9_cls_1.0_prop_0.5_ema_0.99.txt' mode='w' encoding='UTF-8'>
+
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 37.40%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 20.41%  |  Reliable 樣本數 = 221/1083  |  Reliable Purity = 72.85%
+Epoch: 1/15  |  Accuracy = 32.04%
+  Avg Loss: 2.0786  CE: 1.8851  Prop: 0.0000  Ent: -1.5931  Con: 1.7865
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 37.21%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 21.05%  |  Reliable 樣本數 = 228/1083  |  Reliable Purity = 71.49%
+Epoch: 2/15  |  Accuracy = 35.73%
+  Avg Loss: 0.6518  CE: 1.4296  Prop: 0.0000  Ent: -1.7829  Con: 1.0051
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 37.40%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 22.53%  |  Reliable 樣本數 = 244/1083  |  Reliable Purity = 69.26%
+Epoch: 3/15  |  Accuracy = 36.93%
+  Avg Loss: 0.3069  CE: 1.4354  Prop: 0.0000  Ent: -1.9495  Con: 0.8210
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 37.86%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 23.18%  |  Reliable 樣本數 = 251/1083  |  Reliable Purity = 68.13%
+Epoch: 4/15  |  Accuracy = 38.50%
+  Avg Loss: 0.0543  CE: 1.4169  Prop: 0.0000  Ent: -2.0644  Con: 0.7018
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 37.77%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 24.75%  |  Reliable 樣本數 = 268/1083  |  Reliable Purity = 67.54%
+Epoch: 5/15  |  Accuracy = 39.89%
+  Avg Loss: 0.0496  CE: 1.5472  Prop: 0.0000  Ent: -2.1382  Con: 0.6406
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 37.95%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 25.67%  |  Reliable 樣本數 = 278/1083  |  Reliable Purity = 67.63%
+Epoch: 6/15  |  Accuracy = 40.17%
+  Avg Loss: 0.0295  CE: 1.5485  Prop: 0.0000  Ent: -2.1796  Con: 0.6606
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.13%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 26.87%  |  Reliable 樣本數 = 291/1083  |  Reliable Purity = 67.35%
+Epoch: 7/15  |  Accuracy = 40.72%
+  Avg Loss: -0.1560  CE: 1.4897  Prop: 0.0000  Ent: -2.2302  Con: 0.5845
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.50%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 27.89%  |  Reliable 樣本數 = 302/1083  |  Reliable Purity = 65.89%
+Epoch: 8/15  |  Accuracy = 41.09%
+  Avg Loss: -0.1795  CE: 1.5292  Prop: 0.0000  Ent: -2.2663  Con: 0.5575
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.78%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 28.90%  |  Reliable 樣本數 = 313/1083  |  Reliable Purity = 64.54%
+Epoch: 9/15  |  Accuracy = 41.74%
+  Avg Loss: -0.2420  CE: 1.4998  Prop: 0.0000  Ent: -2.2848  Con: 0.5430
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.87%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 29.64%  |  Reliable 樣本數 = 321/1083  |  Reliable Purity = 64.17%
+Epoch: 10/15  |  Accuracy = 41.92%
+  Avg Loss: -0.2528  CE: 1.5237  Prop: 0.0000  Ent: -2.3038  Con: 0.5273
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.87%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 30.19%  |  Reliable 樣本數 = 327/1083  |  Reliable Purity = 63.91%
+Epoch: 11/15  |  Accuracy = 41.74%
+  Avg Loss: -0.2208  CE: 1.5907  Prop: 0.0000  Ent: -2.3340  Con: 0.5225
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.32%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 30.66%  |  Reliable 樣本數 = 332/1083  |  Reliable Purity = 63.86%
+Epoch: 12/15  |  Accuracy = 42.84%
+  Avg Loss: -0.3861  CE: 1.5077  Prop: 0.0000  Ent: -2.3576  Con: 0.4639
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.69%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 31.02%  |  Reliable 樣本數 = 336/1083  |  Reliable Purity = 63.39%
+Epoch: 13/15  |  Accuracy = 42.66%
+  Avg Loss: -0.3896  CE: 1.4890  Prop: 0.0000  Ent: -2.3524  Con: 0.4739
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 38.69%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 31.21%  |  Reliable 樣本數 = 338/1083  |  Reliable Purity = 63.02%
+Epoch: 14/15  |  Accuracy = 43.31%
+  Avg Loss: -0.4053  CE: 1.4863  Prop: 0.0000  Ent: -2.3676  Con: 0.4760
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.06%  |  logitScale=11.9  |  Threshold=Fixed(0.9)
+  Reliable (conf > 0.9000) = 31.76%  |  Reliable 樣本數 = 344/1083  |  Reliable Purity = 62.79%
+Epoch: 15/15  |  Accuracy = 43.31%
+  Avg Loss: -0.4543  CE: 1.5146  Prop: 0.0000  Ent: -2.4055  Con: 0.4365
+  Dynamic Params: cls_par = 1.0000, con_par = 1.0000, prop_par = 0.0000
+  Teacher Strategy: Aug=Original, logitScale=11.9, Threshold=0.9000

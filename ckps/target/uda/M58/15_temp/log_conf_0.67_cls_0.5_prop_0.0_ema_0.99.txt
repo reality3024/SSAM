@@ -1,0 +1,112 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:15
+interval:20
+batch_size:64
+worker:4
+seed:2021
+dset:M58
+net:RN101
+text_logitScale:8.1
+centroid_logitScale:8.1
+classnames_path:/mnt/backups/andycw/M58/classname37.txt
+centroid_path:/mnt/backups/andycw/UDA-AI/class_centroids_37.pth
+projector_path:/mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_randomAug_37classes/source_projector.pt
+ema_m:0.99
+gent:True
+ent:True
+cls_par:0.5
+prop_par:0.0
+ent_par:1.0
+tt:0.05
+conf_thres:0.67
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+epsilon:1e-05
+lr:0.001
+issave:True
+resume_dir:None
+start_epoch:0
+con_par:1.0
+prop_par_target:0.0
+phase1_epochs:15.0
+class_num:37
+s_dset_path:data/M58/CAD_ratioFilter_37_list.txt
+t_dset_path:data/M58/Real_all_nobg_37_list.txt
+test_dset_path:data/M58/Real_all_nobg_37_list.txt
+output_dir_src:ckps/source/uda/M58/C
+output_dir:ckps/target/uda/M58/CR03-13_10:34
+name:CR
+savename:conf_0.67_cls_0.5_prop_0.0_ema_0.99
+out_file:<_io.TextIOWrapper name='ckps/target/uda/M58/CR03-13_10:34/log_conf_0.67_cls_0.5_prop_0.0_ema_0.99.txt' mode='w' encoding='UTF-8'>
+
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.80%  |  Reliable (conf > 0.67) = 21.42%  |  Reliable 樣本數 = 232/1083  |  Reliable Purity = 71.12%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.80%  |  Reliable (conf > 0.67) = 21.42%  |  Reliable 樣本數 = 232/1083  |  Reliable Purity = 71.12%
+Epoch: 1/15  |  Accuracy = 45.34%
+  Avg Loss: 3.2194  CE: 0.8995  Prop: 0.0000  Ent: -0.0320  Con: 2.3519
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.89%  |  Reliable (conf > 0.67) = 21.51%  |  Reliable 樣本數 = 233/1083  |  Reliable Purity = 71.24%
+Epoch: 2/15  |  Accuracy = 45.34%
+  Avg Loss: 2.5554  CE: 0.8966  Prop: 0.0000  Ent: -0.0324  Con: 1.6912
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.89%  |  Reliable (conf > 0.67) = 21.70%  |  Reliable 樣本數 = 235/1083  |  Reliable Purity = 71.49%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.89%  |  Reliable (conf > 0.67) = 21.98%  |  Reliable 樣本數 = 238/1083  |  Reliable Purity = 71.43%
+Epoch: 3/15  |  Accuracy = 45.52%
+  Avg Loss: 2.2366  CE: 0.8937  Prop: 0.0000  Ent: -0.0331  Con: 1.3760
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 39.89%  |  Reliable (conf > 0.67) = 22.16%  |  Reliable 樣本數 = 240/1083  |  Reliable Purity = 71.67%
+Epoch: 4/15  |  Accuracy = 46.26%
+  Avg Loss: 2.1081  CE: 0.8904  Prop: 0.0000  Ent: -0.0337  Con: 1.2514
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.17%  |  Reliable (conf > 0.67) = 22.25%  |  Reliable 樣本數 = 241/1083  |  Reliable Purity = 71.78%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.17%  |  Reliable (conf > 0.67) = 22.62%  |  Reliable 樣本數 = 245/1083  |  Reliable Purity = 71.84%
+Epoch: 5/15  |  Accuracy = 46.26%
+  Avg Loss: 2.0683  CE: 0.8887  Prop: 0.0000  Ent: -0.0342  Con: 1.2138
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.07%  |  Reliable (conf > 0.67) = 22.99%  |  Reliable 樣本數 = 249/1083  |  Reliable Purity = 71.89%
+Epoch: 6/15  |  Accuracy = 46.26%
+  Avg Loss: 1.9596  CE: 0.8866  Prop: 0.0000  Ent: -0.0346  Con: 1.1077
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.17%  |  Reliable (conf > 0.67) = 22.99%  |  Reliable 樣本數 = 249/1083  |  Reliable Purity = 71.89%
+Epoch: 7/15  |  Accuracy = 46.54%
+  Avg Loss: 2.0041  CE: 0.8857  Prop: 0.0000  Ent: -0.0349  Con: 1.1533
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.35%  |  Reliable (conf > 0.67) = 23.27%  |  Reliable 樣本數 = 252/1083  |  Reliable Purity = 71.83%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.35%  |  Reliable (conf > 0.67) = 23.55%  |  Reliable 樣本數 = 255/1083  |  Reliable Purity = 72.16%
+Epoch: 8/15  |  Accuracy = 46.91%
+  Avg Loss: 1.9757  CE: 0.8848  Prop: 0.0000  Ent: -0.0353  Con: 1.1261
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.35%  |  Reliable (conf > 0.67) = 23.82%  |  Reliable 樣本數 = 258/1083  |  Reliable Purity = 72.09%
+Epoch: 9/15  |  Accuracy = 46.63%
+  Avg Loss: 1.8860  CE: 0.8804  Prop: 0.0000  Ent: -0.0355  Con: 1.0411
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.35%  |  Reliable (conf > 0.67) = 24.01%  |  Reliable 樣本數 = 260/1083  |  Reliable Purity = 71.92%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.44%  |  Reliable (conf > 0.67) = 24.01%  |  Reliable 樣本數 = 260/1083  |  Reliable Purity = 71.92%
+Epoch: 10/15  |  Accuracy = 47.18%
+  Avg Loss: 1.9162  CE: 0.8815  Prop: 0.0000  Ent: -0.0358  Con: 1.0706
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.72%  |  Reliable (conf > 0.67) = 24.10%  |  Reliable 樣本數 = 261/1083  |  Reliable Purity = 72.03%
+Epoch: 11/15  |  Accuracy = 47.28%
+  Avg Loss: 1.8390  CE: 0.8814  Prop: 0.0000  Ent: -0.0360  Con: 0.9936
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.81%  |  Reliable (conf > 0.67) = 24.19%  |  Reliable 樣本數 = 262/1083  |  Reliable Purity = 72.52%
+Epoch: 12/15  |  Accuracy = 47.28%
+  Avg Loss: 1.8397  CE: 0.8794  Prop: 0.0000  Ent: -0.0364  Con: 0.9967
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.90%  |  Reliable (conf > 0.67) = 24.28%  |  Reliable 樣本數 = 263/1083  |  Reliable Purity = 72.24%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 40.90%  |  Reliable (conf > 0.67) = 24.38%  |  Reliable 樣本數 = 264/1083  |  Reliable Purity = 72.35%
+Epoch: 13/15  |  Accuracy = 46.81%
+  Avg Loss: 1.8839  CE: 0.8775  Prop: 0.0000  Ent: -0.0367  Con: 1.0431
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 41.09%  |  Reliable (conf > 0.67) = 24.38%  |  Reliable 樣本數 = 264/1083  |  Reliable Purity = 72.35%
+Epoch: 14/15  |  Accuracy = 47.18%
+  Avg Loss: 1.7723  CE: 0.8780  Prop: 0.0000  Ent: -0.0369  Con: 0.9312
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 41.18%  |  Reliable (conf > 0.67) = 24.47%  |  Reliable 樣本數 = 265/1083  |  Reliable Purity = 72.45%
+[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = 41.27%  |  Reliable (conf > 0.67) = 24.65%  |  Reliable 樣本數 = 267/1083  |  Reliable Purity = 72.28%
+Epoch: 15/15  |  Accuracy = 47.65%
+  Avg Loss: 1.7712  CE: 0.8762  Prop: 0.0000  Ent: -0.0374  Con: 0.9324
+  Dynamic Params: cls_par = 0.3000, con_par = 1.0000, prop_par = 0.0000

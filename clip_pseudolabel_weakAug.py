@@ -1043,7 +1043,7 @@ def main():
                         default='/mnt/backups/andycw/M58/CAD_ratioFilter_StableDiffusion_random_37classes',
                         help='Source 資料集資料夾 (用於 M58 classes centroid 提取)')
     parser.add_argument('--projector_path', type=str,
-                        default='/mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_37classesFinal/source_projector.pt',
+                        default='/mnt/backups/andycw/UDA-AI/ckps/target/uda/M58/37_class_8epoch_retrain/target_ProjectorC_ema_current.pt',
                         help='訓練好的 Source Projector 路徑')
     parser.add_argument('--centroid_save_path', type=str, 
                         default='./class_centroids_37classes.pth',
@@ -1196,13 +1196,13 @@ def main():
             source_visual_prototypes=source_visual_prototypes,
             all_features=all_features,
             all_true_labels=all_true_labels,
-            threshold_range=(0.90, 0.95),
+            threshold_range=(0.7, 0.9),
             logit_scale_range=(1.0,12.0),
             threshold_step=0.01,
             logit_scale_step=1,
             target_samples=(50, 200),
-            target_purity=(80, 100),
-            target_coverage=40
+            target_purity=(70, 100),
+            target_coverage=60
         )
 
     if strategy_choice in [2, 4]:

@@ -129,6 +129,111 @@ class Augmentation(object):
 # 工具函數
 # ============================================================
 
+class SATSelector:
+    """
+    FreeMatch 動態閾值選擇器 (Self-Adaptive Threshold Selector)
+    實作無超參數的全域動態閾值機制
+    """
+    def __init__(self, num_classes=37, momentum=0.99):
+        """
+        Args:
+            num_classes: 類別總數
+            momentum: EMA 更新動量 (建議 0.99)
+        """
+        self.num_classes = num_classes
+        self.momentum = momentum
+
+        # 1. p_model: 類別期望預測機率 (估計全域邊際分佈)
+        self.p_model = (torch.ones(num_classes) / num_classes).cuda()
+
+        # 2. p_t: 全域動態閾值 (Global Mean Threshold)
+        # 初始值設定為隨機猜測機率 (1/num_classes)
+        self.p_t = torch.tensor(1.0 / num_classes).cuda()
+
+    def get_reliable_mask(self, probs_teacher, pseudo_labels):
+        """
+        根據 FreeMatch 演算法計算類別專屬動態閾值並生成 Reliable Mask
+
+        Args:
+            probs_teacher: [B, C] Teacher 輸出的預測機率
+            pseudo_labels: [B] argmax 後的預測類別
+
+        Returns:
+            reliable_mask: [B] bool tensor，標記哪些樣本超過其對應類別的閾值
+            class_thresholds: [C] 每個類別的動態閾值
+        """
+        with torch.no_grad():
+            # 取得每個樣本的最大預測機率
+            max_probs = probs_teacher.max(dim=1)[0]
+
+            # ---------------------------------------------------------
+            # [A] 更新全域動態閾值 (p_t)
+            # ---------------------------------------------------------
+            batch_max_mean = max_probs.mean()
+            self.p_t = self.momentum * self.p_t + (1 - self.momentum) * batch_max_mean
+
+            # ---------------------------------------------------------
+            # [B] 更新類別期望分佈並計算 MaxNorm (p_norm)
+            # ---------------------------------------------------------
+            batch_mean_prob = probs_teacher.mean(dim=0)
+            self.p_model = self.momentum * self.p_model + (1 - self.momentum) * batch_mean_prob
+
+            max_p = self.p_model.max()
+            p_norm = self.p_model / max_p
+
+            # ---------------------------------------------------------
+            # [C] 計算最終類別專屬閾值
+            # ---------------------------------------------------------
+            # 最終閾值 = 模型總體信心 (p_t) * 類別公平性權重 (p_norm)
+            class_thresholds = self.p_t * p_norm
+
+            # ---------------------------------------------------------
+            # [D] 分配閾值並產生 Mask
+            # ---------------------------------------------------------
+            sample_thresholds = class_thresholds[pseudo_labels]
+            reliable_mask = max_probs > sample_thresholds
+
+        return reliable_mask, class_thresholds
+
+
+def compute_unsupervised_metrics(max_probs, pseudo_labels, all_probs, conf_threshold, num_classes=37):
+    """
+    計算無監督健康指標 (不涉及真實標籤，完全基於模型內部狀態)
+
+    Args:
+        max_probs: [B] 每個樣本的最大預測機率
+        pseudo_labels: [B] 每個樣本的預測類別 (argmax)
+        all_probs: [B, C] 所有樣本的完整機率分佈
+        conf_threshold: float 或 [C] tensor，目前的過濾閾值
+        num_classes: 類別總數
+
+    Returns:
+        coverage_ratio: 覆蓋率 (跨越閾值的樣本比例，百分比)
+        active_classes: 活躍類別數 (產生至少一個 Reliable 標籤的類別數量)
+        mean_entropy: 預測熵均值 (所有樣本預測機率的資訊熵平均)
+    """
+    with torch.no_grad():
+        # 1. 覆蓋率 (Coverage Ratio)
+        if isinstance(conf_threshold, float):
+            reliable_mask = max_probs > conf_threshold
+        else:
+            # 處理 Class-Aware Threshold 的情況
+            reliable_mask = max_probs > conf_threshold[pseudo_labels]
+
+        coverage_ratio = reliable_mask.float().mean().item() * 100.0
+
+        # 2. 活躍類別數 (Active Class Count)
+        reliable_labels = pseudo_labels[reliable_mask]
+        active_classes = len(torch.unique(reliable_labels))
+
+        # 3. 預測熵均值 (Mean Prediction Entropy)
+        # 加上極小值防止 log(0)
+        entropy = -torch.sum(all_probs * torch.log(all_probs + 1e-8), dim=1)
+        mean_entropy = entropy.mean().item()
+
+    return coverage_ratio, active_classes, mean_entropy
+
+
 def smoothed_cross_entropy(logits, labels, num_classes=37, epsilon=0.1):
     """
     epsilon=0.1 代表信任度為 90%，剩下的 10% 機率均分給其他類別。
@@ -371,7 +476,7 @@ def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epo
         # Phase 2: 使用動態平均信心度（參考 C-SFDA）
         conf_threshold = max_probs.mean().item()
         # 加上底線保護（與訓練邏輯一致）
-        conf_threshold = max(conf_threshold, 0.90)
+        conf_threshold = max(conf_threshold, 0.86)
         threshold_mode = f"Dynamic({conf_threshold:.4f})"
 
     # 記錄統計資訊（使用當前實際的 threshold）
@@ -653,6 +758,16 @@ def train_target(args):
     # 初始化最佳準確率
     acc_init = 0
 
+    # =====================================================
+    # 【新增】初始化 FreeMatch SAT 與 SAF 相關變數
+    # =====================================================
+    # 全域預測期望（用於計算 SAF Loss）
+    global_expected_prob = (torch.ones(args.class_num) / args.class_num).cuda()
+    ema_saf = 0.99  # SAF 期望值的更新動量
+
+    # 初始化 SAT 選擇器（FreeMatch 動態閾值）
+    sat_selector = SATSelector(num_classes=args.class_num, momentum=0.99)
+
     # Epoch 追蹤變數
     batches_per_epoch   = len(dset_loaders["target"])
     current_epoch       = start_epoch_offset  # 從 resume 的 epoch 開始
@@ -687,10 +802,12 @@ def train_target(args):
             iter_num += 1
             continue
         
-        # 根據 epoch 切換 logitScale
-        if current_epoch+1 > args.phase1_epoch:
-            args.centroid_logitScale = 9.9     # Phase 2: 降低 logitScale
-            
+        # 根據 epoch 切換 logitScale（Phase 1: 11.9, Phase 2: 5.0）
+        if current_epoch + 1 < args.phase1_epoch:
+            args.centroid_logitScale = 11.9   # Phase 1: 高 logitScale
+        else:
+            args.centroid_logitScale = 5.0    # Phase 2: 降低 logitScale
+
         # =================================================
         # 學習率排程 + 梯度清零
         # =================================================
@@ -709,7 +826,7 @@ def train_target(args):
         # 特徵提取（CLIP Encoder 凍結，不計梯度）
         # --------------------------------------------------
         with torch.no_grad():
-            # Student 用 Strong，Teacher 用 Weak，IM Loss 用 Original
+            # Student 用 Strong，Teacher 用 Origin，IM Loss 用 Original
             feat_512_weak     = netF(inputs_weak.type(clip_dtype))      # [B, 512]
             feat_512_strong   = netF(inputs_strong.type(clip_dtype))    # [B, 512]
             feat_512_original = netF(inputs_original.type(clip_dtype))  # [B, 512]
@@ -718,6 +835,7 @@ def train_target(args):
         # Student: ProjectorC Forward (Strong aug) → CE / Propagation Loss
         # --------------------------------------------------
         feat_C_strong = netP_C(feat_512_strong)                           # [B, 512]，有梯度
+        # feat_C_weak = netP_C(feat_512_weak)
         feat_stu_norm = F.normalize(feat_C_strong, dim=-1)
 
         # 【修改】使用全域置中的方式計算 Student logits（與 Teacher 對齊）
@@ -769,20 +887,24 @@ def train_target(args):
             batch_mas     = 1.0 - torch.exp(-entropy_batch)               # [B]，高熵→高權重
 
         # --------------------------------------------------
-        # Confidence Mask（基於即時計算的 Pseudo Labels）
+        # Confidence Mask（兩階段過濾邏輯）
         # --------------------------------------------------
-        # 【新增】Epoch >= 20 使用動態平均信心度作為 Threshold（參考 C-SFDA）
-        if current_epoch +1 < args.phase1_epoch:
-            # Phase 1: 使用固定 threshold
-            conf_threshold = args.conf_thres
-        else:
-            # Phase 2: 使用動態平均信心度（參考 C-SFDA）
-            current_batch_mean = batch_max_probs.mean()  # 當前 batch 的平均最大概率
-            # 最後加上 clamp 保護底線 (例如 0.5 或你設定的 conf_thres)
+        if current_epoch + 1 < args.phase1_epoch:
+            # ========== Phase 1: 固定閾值 + 高 Logit Scale ==========
+            current_batch_mean = batch_max_probs.mean()
             conf_threshold = torch.clamp(current_batch_mean, min=0.9).item()
-
-        # 1. 高信心 (Reliable)：直接做 CE Loss
-        reliable_mask = batch_max_probs > conf_threshold   # [B] bool
+            reliable_mask = batch_max_probs > conf_threshold
+            current_class_thresholds = None  # Phase 1 不記錄類別閾值
+        else:
+            # ========== Phase 2: FreeMatch 動態閾值 + 低 Logit Scale ==========
+            reliable_mask, current_class_thresholds = sat_selector.get_reliable_mask(
+                probs_teacher, batch_pseudo_labels
+            )
+            # 設定 conf_threshold 為顯示用（取平均閾值）
+            if current_class_thresholds is not None:
+                conf_threshold = current_class_thresholds.mean().item()
+            else:
+                conf_threshold = 0.0
 
         # 2. 低信心 (Unreliable)：所有非高信心樣本
         unreliable_mask = ~reliable_mask                   # [B] bool
@@ -834,17 +956,29 @@ def train_target(args):
         losses += prop_loss
 
         # --------------------------------------------------
-        # [C] Information Loss：熵最小化（全部樣本，使用 Original image）
+        # [C] Information Loss：Entropy Minimization - SAF
         # --------------------------------------------------
         im_loss = torch.tensor(0.0).cuda()
         if args.ent:
-            softmax_out  = F.softmax(logits_original, dim=1)  # 改用 Original image 的 logits
+            softmax_out = F.softmax(logits_original, dim=1)  # [B, C]
+
+            # 1. 局部銳利化（Entropy Minimization）
             entropy_loss = torch.mean(loss.Entropy(softmax_out))
-            if args.gent:
-                msoftmax      = softmax_out.mean(dim=0)
-                gentropy_loss = torch.sum(-msoftmax * torch.log(msoftmax + args.epsilon))
-                entropy_loss  -= gentropy_loss
-            im_loss = entropy_loss * args.ent_par
+
+            # 2. 全域公平性（Sharpening-Aware Fairness）
+            current_batch_prob = softmax_out.mean(dim=0)  # [C]
+            combined_global_prob = ema_saf * global_expected_prob.detach() + (1 - ema_saf) * current_batch_prob
+
+            # 將 [C] 擴充為 [1, C] 以配合 loss.Entropy 的輸入格式
+            saf_loss = loss.Entropy(combined_global_prob.unsqueeze(0)).squeeze()
+
+            # 3. 結合（Entropy - SAF）
+            im_loss = (entropy_loss - saf_loss) * args.ent_par
+
+            # 4. 更新歷史期望（無梯度）
+            with torch.no_grad():
+                global_expected_prob = ema_saf * global_expected_prob + (1 - ema_saf) * current_batch_prob.detach()
+
         losses += im_loss
 
         # --------------------------------------------------
@@ -896,15 +1030,32 @@ def train_target(args):
                 param_k.data = param_k.data * args.ema_m + param_q.data * (1.0 - args.ema_m)
 
         # =================================================
-        # 進度條更新
+        # 計算並監控無監督健康指標
+        # =================================================
+        # 準備閾值參數（根據 Phase 選擇）
+        if current_epoch + 1 < args.phase1_epoch:
+            metric_threshold = conf_threshold  # Phase 1: 標量閾值
+        else:
+            metric_threshold = current_class_thresholds  # Phase 2: 向量閾值
+
+        cov_ratio, act_classes, mean_ent = compute_unsupervised_metrics(
+            batch_max_probs, batch_pseudo_labels, probs_teacher,
+            metric_threshold, args.class_num
+        )
+
+        # =================================================
+        # 進度條更新（加入新指標）
         # =================================================
         pbar.update(1)
         pbar.set_postfix({
             'Total': f'{losses.item():.4f}',
             'CE':    f'{ce_loss.item():.4f}',
             'Prop':  f'{prop_loss.item():.4f}',
-            'Ent':   f'{im_loss.item():.4f}',
-            'Con':   f'{contrast_loss.item():.4f}'
+            'IM':    f'{im_loss.item():.4f}',
+            'Con':   f'{contrast_loss.item():.4f}',
+            'Cov%':  f'{cov_ratio:.1f}',
+            'ActCls': f'{act_classes}',
+            'H':     f'{mean_ent:.2f}'
         })
 
         # =================================================

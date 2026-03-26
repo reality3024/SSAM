@@ -48,7 +48,6 @@ import copy
 import random
 import loss
 from torch.utils.data import DataLoader
-import wandb
 from data_list import ImageList, ImageList_idx
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix
@@ -303,101 +302,6 @@ def cal_acc(loader, netF, netP, class_centroids, target_global_mean, source_glob
         return accuracy * 100, mean_ent
 
 
-def get_confidence_threshold(current_epoch, args, max_probs=None):
-    """
-    根據 epoch 動態計算 confidence threshold
-
-    訓練策略：
-      - Phase 1 (Epoch 0 ~ 14): 固定高門檻 0.9，暴力建錨
-      - Phase 2 (Epoch 15+): 餘弦退火，從 0.9 平滑降到 0.8，課程學習
-
-    Args:
-        current_epoch: 當前 epoch 數
-        args: 包含 max_epoch 等配置的參數對象
-        max_probs: (可選) [N] FloatTensor，用於動態 threshold 計算
-                   目前未使用，保留供未來擴展
-
-    Returns:
-        conf_threshold: float，當前的信心度門檻
-        threshold_mode: str，描述當前 threshold 模式（用於日誌顯示）
-    """
-    import math
-
-    # Phase 1: 暴力建錨 (Epoch 0 ~ 14)
-    if current_epoch < args.phase1_epoch:
-        conf_threshold = 0.9
-        threshold_mode = f"Fixed({conf_threshold})"
-
-    # Phase 2: 課程閾值退火 (Epoch 15 ~ max_epoch)
-    else:
-        # 計算 Phase 2 的進度 (0.0 到 1.0)
-        phase2_epochs = args.max_epoch - args.phase1_epoch
-        progress = (current_epoch - args.phase1_epoch) / phase2_epochs
-
-        # # 餘弦退火：從 0.9 (嚴格) 緩慢且平滑地降到 0.85 (寬容)
-        T_max = 0.9
-        T_min = 0.85
-        # conf_threshold = T_min + 0.5 * (T_max - T_min) * (1 + math.cos(math.pi * progress))
-        conf_threshold = 0.9
-        threshold_mode = f"Cosine({conf_threshold:.4f})"
-        # conf_threshold = 0.8
-        # threshold_mode = f"Fixed({conf_threshold})"
-
-    return conf_threshold, threshold_mode
-
-
-def get_loss_weights(current_epoch, args):
-    """
-    根據 epoch 動態計算各損失函數的權重
-
-    訓練策略：
-      - Phase 1 (Epoch 0 ~ 14): 快速拓荒階段
-        * CE Loss = args.cls_par (用於高信心樣本分類)
-        * Contrastive Loss = args.con_par (用於特徵對比學習)
-        * Propagation Loss = 0.0 (不使用軟知識蒸餾)
-        * Entropy Loss = args.ent_par (熵最小化 + diversity)
-
-      - Phase 2 (Epoch 15+): 穩定優化階段
-        * CE Loss = args.cls_par
-        * Contrastive Loss = args.con_par
-        * Propagation Loss = args.prop_par (啟用軟知識蒸餾)
-        * Entropy Loss = args.ent_par
-
-    Args:
-        current_epoch: 當前 epoch 數
-        args: 包含 cls_par, con_par, prop_par, ent_par 等配置的參數對象
-
-    Returns:
-        dict: 包含各損失權重和 phase 信息的字典
-            {
-                'cls_par': float,
-                'con_par': float,
-                'prop_par': float,
-                'ent_par': float,
-                'phase': str  # "Phase1" 或 "Phase2"
-            }
-    """
-    # Phase 1: 快速拓荒 (Epoch 0 ~ 14)
-    if current_epoch < args.phase1_epoch:
-        return {
-            'cls_par': args.cls_par,
-            'con_par': args.con_par,
-            'prop_par': 0.0,  # Phase 1 不使用 Propagation Loss
-            'ent_par': args.ent_par,
-            'phase': 'Phase1'
-        }
-
-    # Phase 2: 穩定優化 (Epoch 15+)
-    else:
-        return {
-            'cls_par': args.cls_par,
-            'con_par': args.con_par,
-            'prop_par': args.prop_par,  # Phase 2 啟用 Propagation Loss
-            'ent_par': args.ent_par,
-            'phase': 'Phase2'
-        }
-
-
 def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epoch=0):
     """
     使用 Teacher Projector (EMA, eval mode) 產生全資料集的 Pseudo Labels
@@ -457,9 +361,18 @@ def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epo
     # Softmax Turn Logits to probabiltiy
     all_probs = F.softmax(logits, dim=1)           # [N, C]
     max_probs, pseudo_labels = torch.max(all_probs, dim=1)  # [N]
-
-    # 【統一】使用統一的 threshold 計算函數
-    conf_threshold, threshold_mode = get_confidence_threshold(current_epoch, args, max_probs)
+    
+    # 【新增】根據 epoch 決定 threshold（與訓練邏輯一致）
+    if current_epoch + 1 < args.phase1_epoch:
+        # Phase 1: 使用固定 threshold
+        conf_threshold = args.conf_thres
+        threshold_mode = f"Fixed({conf_threshold})"
+    else:
+        # Phase 2: 使用動態平均信心度（參考 C-SFDA）
+        conf_threshold = max_probs.mean().item()
+        # 加上底線保護（與訓練邏輯一致）
+        conf_threshold = max(conf_threshold, 0.90)
+        threshold_mode = f"Dynamic({conf_threshold:.4f})"
 
     # 記錄統計資訊（使用當前實際的 threshold）
     accuracy       = torch.sum(pseudo_labels.float() == all_labels.float()).item() / float(all_labels.size()[0])
@@ -486,16 +399,7 @@ def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epo
     args.out_file.flush()
     print(log_str)
 
-    # 返回統計信息（供 wandb 記錄使用）
-    stats = {
-        'pseudo_label_accuracy': accuracy,
-        'reliable_ratio': reliable_ratio,
-        'reliable_count': int((max_probs > conf_threshold).sum()),
-        'total_samples': len(pseudo_labels),
-        'reliable_purity': reliable_purity,
-    }
-
-    return pseudo_labels, max_probs, stats
+    return pseudo_labels, max_probs
 
 
 def compute_target_global_mean(netF, netP_C_ema, data_loader, clip_dtype):
@@ -726,28 +630,6 @@ def train_target(args):
     print(f'📂 Test數據路徑 : {args.test_dset_path}\n')
 
     # =====================================================
-    # 初始化 wandb
-    # =====================================================
-    wandb.init(
-        project="CLIP-SFDA",
-        name=f"{args.dset}_s{args.s}t{args.t}_epoch{args.max_epoch}",
-        config={
-            "dataset": args.dset,
-            "source": args.s,
-            "target": args.t,
-            "max_epoch": args.max_epoch,
-            "batch_size": args.batch_size,
-            "learning_rate": args.lr,
-            "ema_momentum": args.ema_m,
-            "conf_threshold": args.conf_thres,
-            "centroid_logitScale": args.centroid_logitScale,
-            "ent_par": args.ent_par,
-            "seed": args.seed,
-        }
-    )
-    print(f'wandb initialized: {wandb.run.name}\n')
-
-    # =====================================================
     # 【新增】預計算 Source 全域均值（固定）和初始 Target 全域均值
     # =====================================================
     print(f'預計算全域均值用於全域置中...')
@@ -804,16 +686,28 @@ def train_target(args):
         if inputs_weak.size(0) == 1:
             iter_num += 1
             continue
+        
+        # 根據 epoch 切換 logitScale
+        # Phase 1: 暴力建錨 (Epoch 0 ~ 14)
+        if current_epoch < 15:
+            args.centroid_logitScale = 10.0  # 依據你 Phase 1 表現好的設定
+            conf_threshold = 0.9             # 維持高門檻
 
-        # 【統一】使用統一的 threshold 和 logitScale 計算函數
-        conf_threshold, _ = get_confidence_threshold(current_epoch, args)
-
-        # # 根據 epoch 設定 logitScale（與 threshold 同步）
-        # if current_epoch < 15:
-        #     args.centroid_logitScale = 10.0  # Phase 1: 暴力建錨
-        # else:
-        #     args.centroid_logitScale = 10.0  # Phase 2: 維持不變，避免特徵休克
-
+        # Phase 2: 課程閾值退火 (Epoch 15 ~ 100)
+        else:
+            args.centroid_logitScale = 10.0  # 維持不變，不製造特徵休克
+            
+            # 計算 Phase 2 的進度 (0.0 到 1.0)
+            phase2_epochs = args.max_epoch - 15
+            progress = (current_epoch - 15) / phase2_epochs
+            
+            # 餘弦退火：從 0.9 (嚴格) 緩慢且平滑地降到 0.8 (寬容)
+            T_max = 0.9
+            T_min = 0.8
+            conf_threshold = T_min + 0.5 * (T_max - T_min) * (1 + math.cos(math.pi * progress))
+        # if current_epoch+1 > args.phase1_epoch:
+        #     args.centroid_logitScale = 10.0     # Phase 2: 降低 logitScale
+            
         # =================================================
         # 學習率排程 + 梯度清零
         # =================================================
@@ -911,13 +805,24 @@ def train_target(args):
         unreliable_mask = ~reliable_mask                   # [B] bool
 
         # =================================================
-        # 【統一】使用統一的損失權重計算函數
+        # 分段學習權重調整
         # =================================================
-        loss_weights = get_loss_weights(current_epoch, args)
-        current_cls_par  = loss_weights['cls_par']
-        current_con_par  = loss_weights['con_par']
-        current_prop_par = loss_weights['prop_par']
-        current_ent_par  = loss_weights['ent_par']
+        if current_epoch + 1 < args.phase1_epoch:  # Phase 1 (Epoch 0-7)
+            current_cls_par  = args.cls_par   # CE Loss = 1
+            current_con_par  = args.con_par   # Contrastive Loss = 1
+            current_prop_par = 0.0   # Prop Loss = 0
+        else:
+        #     # Phase 2 (Epoch 8+): 平滑啟動 Prop Loss + 進度綁定指數衰減 Contrastive Loss
+        #     progress = (current_epoch - args.start_epoch) / (args.max_epoch - args.start_epoch)
+        #     # [3] ✨ Contrastive Loss 進度綁定指數衰減 ✨
+        #     # 當 progress 從 0 走到 1，exp(-1.0 * progress) 會從 1.0 平滑降至 0.368
+        #     # 這完美避開了 Dataset Size 和 Batch Size 帶來的干擾！
+        #     # current_con_par  = args.con_par * math.exp(-1.0 * progress)
+        #     # current_prop_par = args.prop_par * progress   # Prop Loss 從 0 → 1 平滑增長
+        #     # current_cls_par  = 1.0 - current_prop_par              # CE Loss 保持 1 → 0.5
+            current_con_par = args.con_par  # Contrastive Loss 保持不變
+            current_prop_par = args.prop_par
+            current_cls_par = args.cls_par
 
         losses = torch.tensor(0.0).cuda()
 
@@ -932,7 +837,7 @@ def train_target(args):
                 logits_student[reliable_mask],
                 batch_pseudo_labels[reliable_mask],
                 num_classes=args.class_num,
-                epsilon=0.1
+                epsilon=0.15
             ) * current_cls_par
         losses += ce_loss
 
@@ -959,7 +864,7 @@ def train_target(args):
                 msoftmax      = softmax_out.mean(dim=0)
                 gentropy_loss = torch.sum(-msoftmax * torch.log(msoftmax + args.epsilon))
                 entropy_loss  -= gentropy_loss
-            im_loss = entropy_loss * current_ent_par  # 使用動態權重
+            im_loss = entropy_loss * args.ent_par
         losses += im_loss
 
         # --------------------------------------------------
@@ -1023,22 +928,6 @@ def train_target(args):
         })
 
         # =================================================
-        # wandb 記錄 (每個 batch)
-        # =================================================
-        wandb.log({
-            'batch/total_loss': losses.item(),
-            'batch/ce_loss': ce_loss.item(),
-            'batch/prop_loss': prop_loss.item(),
-            'batch/entropy_loss': im_loss.item(),
-            'batch/contrast_loss': contrast_loss.item(),
-            'batch/reliable_count': reliable_count,
-            'batch/reliable_ratio': reliable_count / inputs_weak.size(0),
-            'batch/conf_threshold': conf_threshold,
-            'batch/lr': optimizer.param_groups[0]['lr'],
-            'iter': iter_num,
-        })
-
-        # =================================================
         # Epoch 結束：評估 + 儲存
         # =================================================
         if (iter_num - epoch_start_iter + 1) % batches_per_epoch == 0:
@@ -1056,64 +945,44 @@ def train_target(args):
                                   flag=False)
 
             # 【監控】每個 Epoch 統計一次 Pseudo Label 質量（使用 Centroids）
-            pseudo_label_stats = None
             if current_epoch % 1 == 0:  # 每個 epoch 都記錄
-                _, _, pseudo_label_stats = obtain_label_clip(
+                _, _ = obtain_label_clip(
                     dset_loaders['test'], netF, netP_C_ema, class_centroids, args, current_epoch
                 )
+                # 返回值可以忽略（只用於日誌輸出）
 
-            # 【統一】計算當前 epoch 的動態參數（用於日誌顯示）
-            conf_threshold, threshold_mode = get_confidence_threshold(current_epoch, args)
-            loss_weights = get_loss_weights(current_epoch, args)
-
-            # 取得實際使用的損失權重（根據 phase 動態調整）
-            current_cls_display  = loss_weights['cls_par']
-            current_con_display  = loss_weights['con_par']
-            current_prop_display = loss_weights['prop_par']
-            current_ent_display  = loss_weights['ent_par']
-            current_phase        = loss_weights['phase']
-            teacher_logit_scale  = args.centroid_logitScale
-
+            # 計算當前 epoch 的動態參數（用於日誌顯示）
+            current_ent_display = args.ent_par  # 熵權重保持不變
+            if current_epoch + 1 < args.phase1_epoch:
+                current_cls_display = args.cls_par
+                current_con_display = args.con_par
+                current_prop_display = 0.0
+                teacher_logit_scale = args.centroid_logitScale  # 11
+                threshold_mode = f"Fixed({args.conf_thres})"
+            else:
+                progress = (current_epoch - args.start_epoch) / (args.max_epoch - args.start_epoch)
+                # ✨ 日誌顯示也用相同的進度綁定指數衰減公式
+                # current_con_display = args.con_par * math.exp(-1.0 * progress)
+                # current_prop_display = args.prop_par * progress
+                # current_cls_display = 1.0 - current_prop_display
+                current_con_display = args.con_par  # Contrastive Loss 保持不變
+                current_prop_display = args.prop_par
+                current_cls_display = args.cls_par
+                teacher_logit_scale = args.centroid_logitScale
+                threshold_mode = "Dynamic(Avg)"  # 參考 C-SFDA
             log_str = (
-                f'Epoch: {current_epoch+1}/{args.max_epoch}  |  Accuracy = {acc_s_te:.2f}%  |  {current_phase}\n'
+                f'Epoch: {current_epoch+1}/{args.max_epoch}  |  Accuracy = {acc_s_te:.2f}%\n'
                 f'  Avg Loss: {avg_total:.4f}  '
                 f'CE: {avg_ce:.4f}  '
                 f'Prop: {avg_prop:.4f}  '
                 f'Ent: {avg_entropy:.4f}  '
                 f'Con: {avg_contrast:.4f}\n'
-                f'  Loss Weights: cls={current_cls_display:.4f}, ent={current_ent_display:.4f}, '
-                f'con={current_con_display:.4f}, prop={current_prop_display:.4f}\n'
-                f'  Teacher Strategy: Aug=Original, logitScale={teacher_logit_scale}, Threshold={threshold_mode}'
+                f'  Dynamic Params: cls_par = {current_cls_display:.4f}, ent_par = {current_ent_display:.4f}, con_par = {current_con_display:.4f}, prop_par = {current_prop_display:.4f}\n'
+                f'  Teacher Strategy: Aug=Original, logitScale={teacher_logit_scale}, Threshold={conf_threshold:.4f}'
             )
             print(log_str)
             args.out_file.write(log_str + '\n')
             args.out_file.flush()
-
-            # =================================================
-            # wandb 記錄 (每個 epoch)
-            # =================================================
-            epoch_log = {
-                'epoch/total_loss': avg_total,
-                'epoch/CE_loss': avg_ce,
-                'epoch/prop_loss': avg_prop,
-                'epoch/IM_loss': avg_entropy,
-                'epoch/contrast_loss': avg_contrast,
-                'epoch/accuracy': acc_s_te,
-                'epoch/best_accuracy': acc_init,
-                'epoch': current_epoch + 1,
-            }
-
-            # 如果有 pseudo label 統計資訊，添加到 wandb
-            if pseudo_label_stats is not None:
-                epoch_log.update({
-                    'epoch/pseudo_label_accuracy': pseudo_label_stats['pseudo_label_accuracy'] * 100,
-                    'epoch/reliable_count': pseudo_label_stats['reliable_count'],
-                    'epoch/reliable_ratio': pseudo_label_stats['reliable_ratio'] * 100,
-                    'epoch/reliable_purity': pseudo_label_stats['reliable_purity'] * 100,
-                    'epoch/total_samples': pseudo_label_stats['total_samples'],
-                })
-
-            wandb.log(epoch_log)
 
             # 儲存 Current Model（每個 Epoch 覆蓋）
             torch.save(netP_C.state_dict(),
@@ -1155,10 +1024,6 @@ def train_target(args):
     if 'pbar' in locals():
         pbar.close()
 
-    # 關閉 wandb
-    wandb.finish()
-    print('✅ wandb run finished')
-
     return netP_C, netP_H, netP_C_ema
 
 
@@ -1189,7 +1054,7 @@ if __name__ == "__main__":
     parser.add_argument('--centroid_logitScale',type=float, default=8.1,
                         help='Centroid similarity 的 logit scale（用於 Pseudo Label 生成，建議與 plot 一致）')
     parser.add_argument('--classnames_path',type=str,
-                        default='/mnt/backups/andycw/M58/classname37.txt',
+                        default='/mnt/backups/andycw/dataset/M58/classname37.txt',
                         help='類別名稱檔案路徑（每行一個類別名稱）')
     parser.add_argument('--centroid_path',type=str,
                         default='/mnt/backups/andycw/UDA-AI/class_centroids_37.pth',

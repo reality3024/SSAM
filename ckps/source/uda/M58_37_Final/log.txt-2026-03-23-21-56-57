@@ -1,0 +1,418 @@
+***************
+** 參數設定 **
+***************
+backbone: 
+config_file: configs/trainers/CLIP_Adapter_internVL/rn101.yaml
+dataset_config_file: configs/datasets/m58.yaml
+eval_only: True
+head: 
+load_epoch: None
+model_dir: /mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_37classes_Jeannie
+no_train: False
+opts: ['DATALOADER.TEST.BATCH_SIZE', '32']
+output_dir: /mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_37classes_Jeannie
+resume: 
+root: /mnt/backups/andycw/M58/Real_all_nobg
+seed: 1
+source_domains: None
+target_domains: None
+text_embeddings_path: /mnt/backups/andycw/CLIP/result/M58_text_embeddings.pt
+trainer: CLIP_Source_Model_OriginCLIP_ProjectOnly
+transforms: None
+************
+** 配置 **
+************
+DATALOADER:
+  K_TRANSFORMS: 1
+  NUM_WORKERS: 8
+  RETURN_IMG0: False
+  TEST:
+    BATCH_SIZE: 32
+    SAME_AS_X: True
+    SAMPLER: SequentialSampler
+  TRAIN_U:
+    BATCH_SIZE: 32
+    N_DOMAIN: 0
+    N_INS: 16
+    SAME_AS_X: True
+    SAMPLER: RandomSampler
+  TRAIN_X:
+    BATCH_SIZE: 32
+    N_DOMAIN: 0
+    N_INS: 16
+    SAME_AS_X: True
+    SAMPLER: RandomSampler
+DATASET:
+  ALL_AS_UNLABELED: False
+  CIFAR_C_LEVEL: 1
+  CIFAR_C_TYPE: 
+  NAME: M58
+  NUM_LABELED: -1
+  NUM_SHOTS: -1
+  ROOT: /mnt/backups/andycw/M58/Real_all_nobg
+  SOURCE_DOMAINS: ()
+  STL10_FOLD: -1
+  TARGET_DOMAINS: ()
+  VAL_PERCENT: 0.1
+EVAL_ONLY: True
+INPUT:
+  COLORJITTER_B: 0.4
+  COLORJITTER_C: 0.4
+  COLORJITTER_H: 0.1
+  COLORJITTER_S: 0.4
+  CROP_PADDING: 4
+  CUTOUT_LEN: 16
+  CUTOUT_N: 1
+  GB_K: 21
+  GB_P: 0.5
+  GN_MEAN: 0.0
+  GN_STD: 0.15
+  INTERPOLATION: bicubic
+  NO_TRANSFORM: False
+  PIXEL_MEAN: [0.48145466, 0.4578275, 0.40821073]
+  PIXEL_STD: [0.26862954, 0.26130258, 0.27577711]
+  RANDAUGMENT_M: 10
+  RANDAUGMENT_N: 2
+  RGS_P: 0.2
+  RRCROP_SCALE: (0.5, 1.0)
+  SIZE: (224, 224)
+  TRANSFORMS: ('random_resized_crop', 'random_flip', 'normalize')
+  USE_SOBEL_EDGE: False
+MODEL:
+  BACKBONE:
+    NAME: RN101
+    PRETRAINED: True
+  HEAD:
+    ACTIVATION: relu
+    BN: True
+    DROPOUT: 0.0
+    HIDDEN_LAYERS: ()
+    NAME: 
+  INIT_WEIGHTS: 
+OPTIM:
+  ADAM_BETA1: 0.9
+  ADAM_BETA2: 0.999
+  BASE_LR_MULT: 0.1
+  GAMMA: 0.1
+  LR: 0.0001
+  LR_SCHEDULER: cosine
+  MAX_EPOCH: 50
+  MOMENTUM: 0.9
+  NAME: sgd
+  NEW_LAYERS: ()
+  RMSPROP_ALPHA: 0.99
+  SGD_DAMPNING: 0
+  SGD_NESTEROV: False
+  STAGED_LR: False
+  STEPSIZE: (-1,)
+  WARMUP_CONS_LR: 1e-05
+  WARMUP_EPOCH: 1
+  WARMUP_MIN_LR: 1e-05
+  WARMUP_RECOUNT: True
+  WARMUP_TYPE: constant
+  WEIGHT_DECAY: 0.0005
+OUTPUT_DIR: /mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_37classes_Jeannie
+RESUME: 
+SEED: 1
+TEST:
+  COMPUTE_CMAT: False
+  ENSEMBLE: False
+  ENSEMBLE_WEIGHT_RGB: 0.5
+  ENSEMBLE_WEIGHT_SOBEL: 0.5
+  EVALUATOR: Classification
+  FINAL_MODEL: last_step
+  NO_TEST: False
+  PER_CLASS_RESULT: False
+  SPLIT: test
+TRAIN:
+  CHECKPOINT_FREQ: 10
+  COUNT_ITER: train_x
+  PRINT_FREQ: 5
+TRAINER:
+  CDAC:
+    CLASS_LR_MULTI: 10
+    P_THRESH: 0.95
+    RAMPUP_COEF: 30
+    RAMPUP_ITRS: 1000
+    STRONG_TRANSFORMS: ()
+    TOPK_MATCH: 5
+  CLIP_ADAPTER:
+    RATIO: 0.2
+    TEMPLATE_KEY: M58_ori_CLIP
+    TEXT_TEMPLATE_TYPE: internvl
+    WORD_ADAPTER_TYPE: self_attn
+  CROSSGRAD:
+    ALPHA_D: 0.5
+    ALPHA_F: 0.5
+    EPS_D: 1.0
+    EPS_F: 1.0
+  DAEL:
+    CONF_THRE: 0.95
+    STRONG_TRANSFORMS: ()
+    WEIGHT_U: 0.5
+  DAELDG:
+    CONF_THRE: 0.95
+    STRONG_TRANSFORMS: ()
+    WEIGHT_U: 0.5
+  DDAIG:
+    ALPHA: 0.5
+    CLAMP: False
+    CLAMP_MAX: 1.0
+    CLAMP_MIN: -1.0
+    G_ARCH: 
+    LMDA: 0.3
+    WARMUP: 0
+  DOMAINMIX:
+    ALPHA: 1.0
+    BETA: 1.0
+    TYPE: crossdomain
+  ENTMIN:
+    LMDA: 0.001
+  FIXMATCH:
+    CONF_THRE: 0.95
+    STRONG_TRANSFORMS: ()
+    WEIGHT_U: 1.0
+  M3SDA:
+    LMDA: 0.5
+    N_STEP_F: 4
+  MCD:
+    N_STEP_F: 4
+  MEANTEACHER:
+    EMA_ALPHA: 0.999
+    RAMPUP: 5
+    WEIGHT_U: 1.0
+  MIXMATCH:
+    MIXUP_BETA: 0.75
+    RAMPUP: 20000
+    TEMP: 2.0
+    WEIGHT_U: 100.0
+  MME:
+    LMDA: 0.1
+  NAME: CLIP_Source_Model_OriginCLIP_ProjectOnly
+  SE:
+    CONF_THRE: 0.95
+    EMA_ALPHA: 0.999
+    RAMPUP: 300
+  SOURCE_MODEL:
+    KL_WEIGHT: 0.1
+    PHASE1_EPOCHS: 10
+    PHASE2_EPOCHS: 30
+    TEMPERATURE: 1.0
+    TEXT_EMBEDDINGS_PATH: /mnt/backups/andycw/CLIP/result/M58_text_embeddings.pt
+    USE_LR_SCHEDULER: True
+  STYLIZED:
+    ALPHA: 1.0
+    BETA: 1.0
+    BETA_PHASE1: 1.0
+    BETA_PHASE2: 0.0
+    DATA_PATH: 
+    GAMMA: 1.0
+    PHASE1_EPOCHS: 45
+    PHASE1_LR: 0.001
+    PHASE2_EPOCHS: 60
+    PHASE2_LR: 0.0001
+    SOBEL_PATH: 
+USE_CUDA: True
+VERBOSE: True
+VERSION: 1
+收集環境資訊...
+** 系統資訊 **
+PyTorch version: 2.5.1
+Is debug build: False
+CUDA used to build PyTorch: 12.1
+ROCM used to build PyTorch: N/A
+
+OS: Ubuntu 24.04.1 LTS (x86_64)
+GCC version: (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Clang version: Could not collect
+CMake version: version 3.28.3
+Libc version: glibc-2.39
+
+Python version: 3.10.19 | packaged by conda-forge | (main, Oct 22 2025, 22:29:10) [GCC 14.3.0] (64-bit runtime)
+Python platform: Linux-6.11.0-29-generic-x86_64-with-glibc2.39
+Is CUDA available: True
+CUDA runtime version: 12.0.140
+CUDA_MODULE_LOADING set to: LAZY
+GPU models and configuration: GPU 0: NVIDIA GeForce RTX 4090
+Nvidia driver version: 550.144.03
+cuDNN version: Could not collect
+HIP runtime version: N/A
+MIOpen runtime version: N/A
+Is XNNPACK available: True
+
+CPU:
+Architecture:                         x86_64
+CPU op-mode(s):                       32-bit, 64-bit
+Address sizes:                        39 bits physical, 48 bits virtual
+Byte Order:                           Little Endian
+CPU(s):                               28
+On-line CPU(s) list:                  0-27
+Vendor ID:                            GenuineIntel
+Model name:                           Intel(R) Core(TM) i7-14700F
+CPU family:                           6
+Model:                                183
+Thread(s) per core:                   2
+Core(s) per socket:                   20
+Socket(s):                            1
+Stepping:                             1
+CPU(s) scaling MHz:                   45%
+CPU max MHz:                          5400.0000
+CPU min MHz:                          800.0000
+BogoMIPS:                             4224.00
+Flags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb intel_pt sha_ni xsaveopt xsavec xgetbv1 xsaves split_lock_detect user_shstk avx_vnni dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req hfi vnmi umip pku ospke waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear serialize arch_lbr ibt flush_l1d arch_capabilities
+Virtualization:                       VT-x
+L1d cache:                            768 KiB (20 instances)
+L1i cache:                            1 MiB (20 instances)
+L2 cache:                             28 MiB (11 instances)
+L3 cache:                             33 MiB (1 instance)
+NUMA node(s):                         1
+NUMA node0 CPU(s):                    0-27
+Vulnerability Gather data sampling:   Not affected
+Vulnerability Itlb multihit:          Not affected
+Vulnerability L1tf:                   Not affected
+Vulnerability Mds:                    Not affected
+Vulnerability Meltdown:               Not affected
+Vulnerability Mmio stale data:        Not affected
+Vulnerability Reg file data sampling: Mitigation; Clear Register File
+Vulnerability Retbleed:               Not affected
+Vulnerability Spec rstack overflow:   Not affected
+Vulnerability Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:             Mitigation; Enhanced / Automatic IBRS; IBPB conditional; RSB filling; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S
+Vulnerability Srbds:                  Not affected
+Vulnerability Tsx async abort:        Not affected
+
+Versions of relevant libraries:
+[pip3] flake8==3.7.9
+[pip3] numpy==2.2.6
+[pip3] torch==2.5.1
+[pip3] torchaudio==2.5.1
+[pip3] torchvision==0.20.1
+[pip3] triton==3.1.0
+[conda] blas                      1.0                         mkl    conda-forge
+[conda] libblas                   3.9.0            16_linux64_mkl    conda-forge
+[conda] libcblas                  3.9.0            16_linux64_mkl    conda-forge
+[conda] liblapack                 3.9.0            16_linux64_mkl    conda-forge
+[conda] mkl                       2022.1.0           hc2b9512_224  
+[conda] numpy                     2.2.6           py310hefbff90_0    conda-forge
+[conda] pytorch                   2.5.1           py3.10_cuda12.1_cudnn9.1.0_0    pytorch
+[conda] pytorch-cuda              12.1                 ha16c6d3_6    pytorch
+[conda] pytorch-mutex             1.0                        cuda    pytorch
+[conda] torchaudio                2.5.1               py310_cu121    pytorch
+[conda] torchtriton               3.1.0                     py310    pytorch
+[conda] torchvision               0.20.1              py310_cu121    pytorch
+        Pillow (12.1.0)
+
+Loading trainer: CLIP_Source_Model_OriginCLIP_ProjectOnly
+Loading dataset: M58
+載入 37 個類別名稱
+正在載入 internvl 描述從: /mnt/backups/andycw/M58/M58_79classes_sourceImage_descriptions_summerized.csv
+internvl 描述載入完成！
+Inference 模式載入: 1083 張圖片 (來自所有類別)
+目前測試的資料夾: /mnt/backups/andycw/M58/Real_all_nobg
+*** Inference 模式：test 集包含所有 1083 張圖片 ***
+Building transform_train
++ random resized crop (size=(224, 224), scale=(0.5, 1.0))
++ random flip
++ to torch tensor of range [0, 1]
++ normalization (mean=[0.48145466, 0.4578275, 0.40821073], std=[0.26862954, 0.26130258, 0.27577711])
+Building transform_test
++ resize the smaller edge to 224
++ 224x224 center crop
++ to torch tensor of range [0, 1]
++ normalization (mean=[0.48145466, 0.4578275, 0.40821073], std=[0.26862954, 0.26130258, 0.27577711])
+---------  -----
+Dataset    M58
+# classes  37
+# train_x  1,083
+# test     1,083
+---------  -----
+
+============================================================
+建立 Pure CLIP Source Model
+============================================================
+類別數量: 37
+載入 CLIP (backbone: RN101)
+🎯 初始化 Pure CLIP Source Model (Projector Only)
+  - Backbone: RN101
+  - Feature dim: 512
+  - Num classes: 37
+
+✅ 建立 Trainable MLP Projector: 512 → 1024 → 512
+
+🔒 生成 Text Features（使用簡單模板）
+  - Template: "A photo of a [CLASS_NAME]"
+  ✓ Text features shape: torch.Size([37, 512])
+  ✓ 已正規化: True
+
+============================================================
+參數凍結策略
+============================================================
+🔒 CLIP Image Encoder: 凍結 (Frozen)
+🔒 Text Features: 凍結 (Frozen, registered as buffer)
+✅ MLP Projector: 解凍 (Trainable)
+
+============================================================
+建立優化器（只優化 Projector）
+============================================================
+  - Type: SGD with Nesterov
+  - Learning Rate: 0.0001
+  - Momentum: 0.9
+  - Weight Decay: 1e-3
+
+============================================================
+設置訓練模式
+============================================================
+✅ Projector: train() 模式 (BatchNorm 會更新 running stats)
+🔒 CLIP Encoder: eval() 模式 (凍結)
+============================================================
+
+Loading evaluator: Classification
+
+============================================================
+載入 Source Model
+目錄: /mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/rn101_projector_originCLIP_ep50_LR0.01_37classes_Jeannie
+============================================================
+✓ source_projector.pt: ✅ Trainable MLP Projector 已載入
+============================================================
+
+
+============================================================
+開始評估 (split=test)
+============================================================
+Inference 模式檢查: EVAL_ONLY = True, 將生成CSV = True
+=> result
+* total: 1,083
+* correct: 463
+* accuracy: 42.8%
+* error: 57.2%
+* macro_f1: 39.3%
+詳細預測結果已保存到: /mnt/backups/andycw/CLIP/result/M58_PureCLIP_Source_Model_output.csv
+類別統計結果已保存到: /mnt/backups/andycw/CLIP/result/M58_PureCLIP_Source_Model_result.csv
+
+結果檔案預覽:
+
+/mnt/backups/andycw/CLIP/result/M58_PureCLIP_Source_Model_result.csv (前5行):
+  class_id        class_name  total_imgNum  top1_correct top1_acc
+0        0  M58-Encoder側走行機身            51            51  100.00%
+1        1     M58-FORK定位固定片            15             4   26.67%
+2        2     M58-FORK定位檢知片            15             0    0.00%
+3        3      M58-FORK驅動軸心            36             8   22.22%
+4        4      M58-Fork機身-1            27             3   11.11%
+
+/mnt/backups/andycw/CLIP/result/M58_PureCLIP_Source_Model_output.csv (前5行):
+                                          image_path  class_id        true_class        pred_class confidence  is_correct
+0  /mnt/backups/andycw/M58/Real_all_nobg/M58-Enco...         0  M58-Encoder側走行機身  M58-Encoder側走行機身     0.9993        True
+1  /mnt/backups/andycw/M58/Real_all_nobg/M58-Enco...         0  M58-Encoder側走行機身  M58-Encoder側走行機身     0.9994        True
+2  /mnt/backups/andycw/M58/Real_all_nobg/M58-Enco...         0  M58-Encoder側走行機身  M58-Encoder側走行機身     0.9986        True
+3  /mnt/backups/andycw/M58/Real_all_nobg/M58-Enco...         0  M58-Encoder側走行機身  M58-Encoder側走行機身     0.9959        True
+4  /mnt/backups/andycw/M58/Real_all_nobg/M58-Enco...         0  M58-Encoder側走行機身  M58-Encoder側走行機身     0.9990        True
+
+============================================================
+推論結果摘要
+============================================================
+  accuracy: 42.75%
+  error_rate: 57.25%
+  macro_f1: 39.25%
+============================================================
+

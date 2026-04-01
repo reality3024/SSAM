@@ -1040,13 +1040,13 @@ def main():
 
     # ---- Source (Centroid 提取) ----
     parser.add_argument('--src_data_root', type=str,
-                        default='/mnt/backups/andycw/M58/CAD_ratioFilter_StableDiffusion_random_37classes',
+                        default='/mnt/backups/andycw/dataset/VISDA-C/train',
                         help='Source 資料集資料夾 (用於 M58 classes centroid 提取)')
     parser.add_argument('--projector_path', type=str,
-                        default='/mnt/backups/andycw/UDA-AI/ckps/target/uda/M58/37_class_8epoch_retrain/target_ProjectorC_ema_current.pt',
+                        default='/mnt/backups/andycw/UDA-AI/output/visda/PureCLIP_Source_Model/RN101_ep50_lr0.01/source_projector.pt',
                         help='訓練好的 Source Projector 路徑')
     parser.add_argument('--centroid_save_path', type=str, 
-                        default='./class_centroids_37classes.pth',
+                        default='/mnt/backups/andycw/UDA-AI/output/visda/PureCLIP_Source_Model/RN101_ep50_lr0.01/source_class_centroids.pth',
                         help='Centroid 儲存/載入路徑')
 
     # ---- Target (Pseudo Label 分析) ----

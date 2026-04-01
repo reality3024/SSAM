@@ -1,0 +1,13 @@
+================================================================================
+Prediction Accuracy Comparison (Global Centering vs No-GC)
+================================================================================
+
+Config:
+  Logit Scale: 8.1 (from contrast_clip_projector_ema.py)
+  Target samples: 3000
+  Source classes: 12
+
+Accuracy against Ground Truth:
+  Without Global Centering: 53.03%
+  With Global Centering:    9.30%
+  Improvement (GC - No-GC): -43.73%

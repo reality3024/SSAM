@@ -1,0 +1,293 @@
+==========================================
+gpu_id:0
+s:0
+t:1
+max_epoch:50
+interval:20
+batch_size:64
+worker:8
+seed:2021
+dset:VISDA-C
+net:RN101
+centroid_logitScale:10.0
+classnames_path:/mnt/backups/andycw/M58/classname37.txt
+centroid_path:/mnt/backups/andycw/UDA-AI/output/visda/PureCLIP_Source_Model/RN101_ep50_lr0.01_New/source_class_centroids.pth
+projector_path:/mnt/backups/andycw/UDA-AI/output/visda/PureCLIP_Source_Model/RN101_ep50_lr0.01_New/source_projector.pt
+ema_m:0.99
+gent:True
+ent:True
+cls_par:0.0
+prop_par:0.0
+ent_par:1.0
+tt:0.05
+conf_thres:0.9
+output:ckps/target/
+output_src:ckps/source/
+da:uda
+epsilon:1e-05
+lr:0.001
+issave:True
+resume_dir:None
+start_epoch:0
+con_par:0.0
+use_wandb:True
+class_num:12
+s_dset_path:data/VISDA-C/train_list.txt
+t_dset_path:data/VISDA-C/validation_list.txt
+test_dset_path:data/VISDA-C/validation_list.txt
+output_dir_src:ckps/source/uda/VISDA-C/T
+output_dir:ckps/target/uda/VISDA-C/TV03-31_16:07
+name:TV
+savename:conf_0.9_cls_0.0_prop_0.0_ema_0.99
+out_file:<_io.TextIOWrapper name='ckps/target/uda/VISDA-C/TV03-31_16:07/log_conf_0.9_cls_0.0_prop_0.0_ema_0.99.txt' mode='w' encoding='UTF-8'>
+
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.11%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 82.69%  |  Reliable count = 45799/55388  |  Reliable Purity = 80.15%
+Epoch: 1/50  |  Accuracy = 75.03%  |
+  Avg Loss: -2.1880  CE: 0.0000  Prop: 0.0000  Ent: -2.1880  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.88%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 85.16%  |  Reliable count = 47171/55388  |  Reliable Purity = 78.77%
+Epoch: 2/50  |  Accuracy = 75.11%  |
+  Avg Loss: -2.2807  CE: 0.0000  Prop: 0.0000  Ent: -2.2807  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.83%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 86.69%  |  Reliable count = 48018/55388  |  Reliable Purity = 78.29%
+Epoch: 3/50  |  Accuracy = 74.53%  |
+  Avg Loss: -2.3016  CE: 0.0000  Prop: 0.0000  Ent: -2.3016  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.56%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 86.29%  |  Reliable count = 47794/55388  |  Reliable Purity = 77.30%
+Epoch: 4/50  |  Accuracy = 74.05%  |
+  Avg Loss: -2.3171  CE: 0.0000  Prop: 0.0000  Ent: -2.3171  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.86%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.50%  |  Reliable count = 48465/55388  |  Reliable Purity = 78.03%
+Epoch: 5/50  |  Accuracy = 74.92%  |
+  Avg Loss: -2.3266  CE: 0.0000  Prop: 0.0000  Ent: -2.3266  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.34%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.00%  |  Reliable count = 48741/55388  |  Reliable Purity = 77.32%
+Epoch: 6/50  |  Accuracy = 74.88%  |
+  Avg Loss: -2.3346  CE: 0.0000  Prop: 0.0000  Ent: -2.3346  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.64%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 86.79%  |  Reliable count = 48069/55388  |  Reliable Purity = 77.26%
+Epoch: 7/50  |  Accuracy = 75.78%  |
+  Avg Loss: -2.3407  CE: 0.0000  Prop: 0.0000  Ent: -2.3407  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.71%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.59%  |  Reliable count = 48513/55388  |  Reliable Purity = 78.19%
+Epoch: 8/50  |  Accuracy = 74.81%  |
+  Avg Loss: -2.3460  CE: 0.0000  Prop: 0.0000  Ent: -2.3460  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.33%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.69%  |  Reliable count = 48567/55388  |  Reliable Purity = 78.86%
+Epoch: 9/50  |  Accuracy = 74.97%  |
+  Avg Loss: -2.3477  CE: 0.0000  Prop: 0.0000  Ent: -2.3477  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.85%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.08%  |  Reliable count = 48786/55388  |  Reliable Purity = 78.99%
+Epoch: 10/50  |  Accuracy = 75.82%  |
+  Avg Loss: -2.3521  CE: 0.0000  Prop: 0.0000  Ent: -2.3521  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.09%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.74%  |  Reliable count = 48597/55388  |  Reliable Purity = 78.42%
+Epoch: 11/50  |  Accuracy = 75.09%  |
+  Avg Loss: -2.3553  CE: 0.0000  Prop: 0.0000  Ent: -2.3553  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.65%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.24%  |  Reliable count = 48877/55388  |  Reliable Purity = 77.88%
+Epoch: 12/50  |  Accuracy = 73.88%  |
+  Avg Loss: -2.3595  CE: 0.0000  Prop: 0.0000  Ent: -2.3595  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.48%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.28%  |  Reliable count = 48899/55388  |  Reliable Purity = 77.49%
+Epoch: 13/50  |  Accuracy = 74.36%  |
+  Avg Loss: -2.3576  CE: 0.0000  Prop: 0.0000  Ent: -2.3576  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.72%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.07%  |  Reliable count = 48782/55388  |  Reliable Purity = 76.93%
+Epoch: 14/50  |  Accuracy = 73.96%  |
+  Avg Loss: -2.3625  CE: 0.0000  Prop: 0.0000  Ent: -2.3625  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.64%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.96%  |  Reliable count = 48718/55388  |  Reliable Purity = 77.02%
+Epoch: 15/50  |  Accuracy = 74.94%  |
+  Avg Loss: -2.3662  CE: 0.0000  Prop: 0.0000  Ent: -2.3662  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.43%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.54%  |  Reliable count = 48489/55388  |  Reliable Purity = 76.82%
+Epoch: 16/50  |  Accuracy = 75.28%  |
+  Avg Loss: -2.3665  CE: 0.0000  Prop: 0.0000  Ent: -2.3665  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.59%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.85%  |  Reliable count = 48657/55388  |  Reliable Purity = 76.73%
+Epoch: 17/50  |  Accuracy = 74.06%  |
+  Avg Loss: -2.3672  CE: 0.0000  Prop: 0.0000  Ent: -2.3672  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.81%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.22%  |  Reliable count = 48863/55388  |  Reliable Purity = 76.84%
+Epoch: 18/50  |  Accuracy = 74.40%  |
+  Avg Loss: -2.3672  CE: 0.0000  Prop: 0.0000  Ent: -2.3672  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.38%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.59%  |  Reliable count = 48517/55388  |  Reliable Purity = 76.73%
+Epoch: 19/50  |  Accuracy = 73.75%  |
+  Avg Loss: -2.3702  CE: 0.0000  Prop: 0.0000  Ent: -2.3702  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 70.56%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.85%  |  Reliable count = 48658/55388  |  Reliable Purity = 75.72%
+Epoch: 20/50  |  Accuracy = 73.52%  |
+  Avg Loss: -2.3704  CE: 0.0000  Prop: 0.0000  Ent: -2.3704  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 70.28%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.87%  |  Reliable count = 48671/55388  |  Reliable Purity = 75.70%
+Epoch: 21/50  |  Accuracy = 72.63%  |
+  Avg Loss: -2.3711  CE: 0.0000  Prop: 0.0000  Ent: -2.3711  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 70.98%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.52%  |  Reliable count = 49032/55388  |  Reliable Purity = 76.12%
+Epoch: 22/50  |  Accuracy = 73.81%  |
+  Avg Loss: -2.3741  CE: 0.0000  Prop: 0.0000  Ent: -2.3741  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 70.89%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.10%  |  Reliable count = 48799/55388  |  Reliable Purity = 76.17%
+Epoch: 23/50  |  Accuracy = 72.63%  |
+  Avg Loss: -2.3738  CE: 0.0000  Prop: 0.0000  Ent: -2.3738  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.07%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.66%  |  Reliable count = 49109/55388  |  Reliable Purity = 77.30%
+Epoch: 24/50  |  Accuracy = 73.29%  |
+  Avg Loss: -2.3733  CE: 0.0000  Prop: 0.0000  Ent: -2.3733  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.51%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.28%  |  Reliable count = 48894/55388  |  Reliable Purity = 77.07%
+Epoch: 25/50  |  Accuracy = 74.56%  |
+  Avg Loss: -2.3763  CE: 0.0000  Prop: 0.0000  Ent: -2.3763  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.88%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.57%  |  Reliable count = 48502/55388  |  Reliable Purity = 77.68%
+Epoch: 26/50  |  Accuracy = 73.71%  |
+  Avg Loss: -2.3779  CE: 0.0000  Prop: 0.0000  Ent: -2.3779  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.67%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.69%  |  Reliable count = 48571/55388  |  Reliable Purity = 77.59%
+Epoch: 27/50  |  Accuracy = 74.59%  |
+  Avg Loss: -2.3787  CE: 0.0000  Prop: 0.0000  Ent: -2.3787  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.48%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.61%  |  Reliable count = 48523/55388  |  Reliable Purity = 77.37%
+Epoch: 28/50  |  Accuracy = 73.36%  |
+  Avg Loss: -2.3782  CE: 0.0000  Prop: 0.0000  Ent: -2.3782  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.45%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.87%  |  Reliable count = 49224/55388  |  Reliable Purity = 76.73%
+Epoch: 29/50  |  Accuracy = 73.89%  |
+  Avg Loss: -2.3804  CE: 0.0000  Prop: 0.0000  Ent: -2.3804  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.45%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.42%  |  Reliable count = 48976/55388  |  Reliable Purity = 76.77%
+Epoch: 30/50  |  Accuracy = 73.27%  |
+  Avg Loss: -2.3810  CE: 0.0000  Prop: 0.0000  Ent: -2.3810  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.44%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.53%  |  Reliable count = 49035/55388  |  Reliable Purity = 76.83%
+Epoch: 31/50  |  Accuracy = 73.41%  |
+  Avg Loss: -2.3807  CE: 0.0000  Prop: 0.0000  Ent: -2.3807  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.22%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.26%  |  Reliable count = 48886/55388  |  Reliable Purity = 76.87%
+Epoch: 32/50  |  Accuracy = 74.30%  |
+  Avg Loss: -2.3809  CE: 0.0000  Prop: 0.0000  Ent: -2.3809  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.23%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.13%  |  Reliable count = 48811/55388  |  Reliable Purity = 77.02%
+Epoch: 33/50  |  Accuracy = 73.73%  |
+  Avg Loss: -2.3825  CE: 0.0000  Prop: 0.0000  Ent: -2.3825  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.54%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.45%  |  Reliable count = 48989/55388  |  Reliable Purity = 77.05%
+Epoch: 34/50  |  Accuracy = 74.55%  |
+  Avg Loss: -2.3784  CE: 0.0000  Prop: 0.0000  Ent: -2.3784  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.08%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.41%  |  Reliable count = 48970/55388  |  Reliable Purity = 77.70%
+Epoch: 35/50  |  Accuracy = 74.02%  |
+  Avg Loss: -2.3820  CE: 0.0000  Prop: 0.0000  Ent: -2.3820  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.85%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.87%  |  Reliable count = 48667/55388  |  Reliable Purity = 78.15%
+Epoch: 36/50  |  Accuracy = 74.35%  |
+  Avg Loss: -2.3826  CE: 0.0000  Prop: 0.0000  Ent: -2.3826  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 70.94%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.53%  |  Reliable count = 48482/55388  |  Reliable Purity = 77.29%
+Epoch: 37/50  |  Accuracy = 74.30%  |
+  Avg Loss: -2.3842  CE: 0.0000  Prop: 0.0000  Ent: -2.3842  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 70.90%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.50%  |  Reliable count = 48466/55388  |  Reliable Purity = 77.33%
+Epoch: 38/50  |  Accuracy = 75.21%  |
+  Avg Loss: -2.3828  CE: 0.0000  Prop: 0.0000  Ent: -2.3828  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 71.66%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.55%  |  Reliable count = 48491/55388  |  Reliable Purity = 78.10%
+Epoch: 39/50  |  Accuracy = 74.41%  |
+  Avg Loss: -2.3849  CE: 0.0000  Prop: 0.0000  Ent: -2.3849  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.35%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.11%  |  Reliable count = 48803/55388  |  Reliable Purity = 78.27%
+Epoch: 40/50  |  Accuracy = 73.81%  |
+  Avg Loss: -2.3831  CE: 0.0000  Prop: 0.0000  Ent: -2.3831  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.14%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.61%  |  Reliable count = 49078/55388  |  Reliable Purity = 78.98%
+Epoch: 41/50  |  Accuracy = 75.16%  |
+  Avg Loss: -2.3814  CE: 0.0000  Prop: 0.0000  Ent: -2.3814  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.94%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.13%  |  Reliable count = 48816/55388  |  Reliable Purity = 79.17%
+Epoch: 42/50  |  Accuracy = 74.29%  |
+  Avg Loss: -2.3828  CE: 0.0000  Prop: 0.0000  Ent: -2.3828  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 72.55%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 88.59%  |  Reliable count = 49068/55388  |  Reliable Purity = 78.46%
+Epoch: 43/50  |  Accuracy = 73.08%  |
+  Avg Loss: -2.3841  CE: 0.0000  Prop: 0.0000  Ent: -2.3841  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.77%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.78%  |  Reliable count = 48621/55388  |  Reliable Purity = 80.22%
+Epoch: 44/50  |  Accuracy = 74.21%  |
+  Avg Loss: -2.3854  CE: 0.0000  Prop: 0.0000  Ent: -2.3854  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 74.50%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.96%  |  Reliable count = 48721/55388  |  Reliable Purity = 80.72%
+Epoch: 45/50  |  Accuracy = 73.65%  |
+  Avg Loss: -2.3860  CE: 0.0000  Prop: 0.0000  Ent: -2.3860  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.99%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.59%  |  Reliable count = 48514/55388  |  Reliable Purity = 80.25%
+Epoch: 46/50  |  Accuracy = 74.36%  |
+  Avg Loss: -2.3861  CE: 0.0000  Prop: 0.0000  Ent: -2.3861  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.64%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.12%  |  Reliable count = 48255/55388  |  Reliable Purity = 80.07%
+Epoch: 47/50  |  Accuracy = 73.45%  |
+  Avg Loss: -2.3852  CE: 0.0000  Prop: 0.0000  Ent: -2.3852  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.61%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 86.78%  |  Reliable count = 48066/55388  |  Reliable Purity = 80.31%
+Epoch: 48/50  |  Accuracy = 73.73%  |
+  Avg Loss: -2.3856  CE: 0.0000  Prop: 0.0000  Ent: -2.3856  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.30%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.74%  |  Reliable count = 48596/55388  |  Reliable Purity = 79.30%
+Epoch: 49/50  |  Accuracy = 74.80%  |
+  Avg Loss: -2.3841  CE: 0.0000  Prop: 0.0000  Ent: -2.3841  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9
+[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = 73.23%  |  logitScale=10.0  |    Reliable (conf > 0.9000) = 87.50%  |  Reliable count = 48462/55388  |  Reliable Purity = 79.78%
+Epoch: 50/50  |  Accuracy = 74.64%  |
+  Avg Loss: -2.3864  CE: 0.0000  Prop: 0.0000  Ent: -2.3864  Con: 0.0000
+  Loss Weights: cls=0.0000, ent=1.0000, con=0.0000, prop=0.0000
+  Teacher Strategy: Aug=Original, logitScale=10.0, Threshold=0.9

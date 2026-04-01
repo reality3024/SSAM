@@ -1,37 +1,33 @@
 """
-CLIP + MLPProjector EMA Teacher 的 SFDA 訓練腳本
-架構：
-  CLIP RN101 Visual Encoder (完全凍結)
-  + Student MLP ProjectorC (可訓練，用於分類)
-  + Student MLP ProjectorH (可訓練，串接在 ProjectorC 後，只用於對比學習)
-  + Teacher MLP ProjectorC_ema (EMA，隨 Student ProjectorC 被動更新)
+CLIP + MLPProjector EMA Teacher SFDA Training Script
+Architecture:
+  CLIP RN101 Visual Encoder (fully frozen)
+  + Student MLP ProjectorC (trainable, used for classification)
+  + Student MLP ProjectorH (trainable, chained after ProjectorC, for contrastive learning only)
+  + Teacher MLP ProjectorC_ema (EMA, passively updated with Student ProjectorC)
 
-損失函數（四個）：
-  [A] CE Loss          - 高信心 Pseudo-label 樣本的 cross-entropy（reliable）
-  [B] Propagation Loss - 低信心樣本的 MSE 對齊 Teacher logits（unreliable）
-  [C] Information Loss - 全樣本的熵最小化 + diversity（im_loss）
-  [D] Contrastive Loss - 弱/強增強特徵的 SimCLR 對比學習
+Loss Functions (four types):
+  [A] CE Loss          - Cross-entropy for high-confidence Pseudo-label samples (reliable)
+  [B] Propagation Loss - MSE alignment to Teacher logits for low-confidence samples (unreliable)
+  [C] Information Loss - Entropy minimization + diversity for all samples (im_loss)
+  [D] Contrastive Loss - SimCLR contrastive learning on weak/strong augmented features
 
-特徵使用原則：
-  - Student 使用 Strong augmented image → ProjectorC → 用於 CE、Propagation Loss
-  - Student 使用 Original image → ProjectorC → 用於 IM Loss
-  - Teacher 使用 Original image → ProjectorC_ema → 用於 Pseudo Label 生成
-  - Contrastive Loss 使用 Weak + Strong → ProjectorC → ProjectorH（串聯）
+Feature Usage Principles:
+  - Student: Strong augmented image → ProjectorC → used for CE, Propagation Loss
+  - Student: Original image → ProjectorC → used for IM Loss
+  - Teacher: Original image → ProjectorC_ema → used for Pseudo Label generation
+  - Contrastive Loss: Weak + Strong → ProjectorC → ProjectorH (chained)
 
-訓練策略：
-  - Phase 1 (Epoch 0-19):
-    * CE=1.0, Con=1.0, Prop=0.0 (快速拓荒)
-    * logitScale=11, Threshold=固定(args.conf_thres)
-  - Phase 2 (Epoch 20+):
-    * CE=1.0, Con=1.0, Prop 平滑增長至 1.0 (軟知識蒸餾)
-    * logitScale=5, Threshold=動態平均信心度（參考 C-SFDA）
-  - Pseudo Label 計算方式: 每個 batch 即時計算（用最新 Teacher EMA）
-  - 每個 Epoch 結束時使用 obtain_label_clip 監控整體 Pseudo Label 質量
+Training Strategy (Phase 2 only):
+  - CE=1.0, Con=1.0, Prop starts from 0 and increases to 1.0 (knowledge distillation)
+  - logitScale=5, Threshold=dynamic average confidence (reference C-SFDA)
+  - Pseudo Label calculation: computed in real-time for each batch (using latest Teacher EMA)
+  - Each Epoch end: use obtain_label_clip to monitor overall Pseudo Label quality
 
-參考來源：
-  - contrast_feature_micro.py （主骨架、Contrastive Loss、IM Loss）
-  - C-SFDA/target_csfda.py （EMA Teacher、CE Loss、Propagation Loss、動態 Threshold）
-  - clip_adaptation_projector.py （Projector 架構、Text Feature 生成）
+Reference Sources:
+  - contrast_feature_micro.py (main backbone, Contrastive Loss, IM Loss)
+  - C-SFDA/target_csfda.py (EMA Teacher, CE Loss, Propagation Loss, dynamic Threshold)
+  - clip_adaptation_projector.py (Projector architecture, Text Feature generation)
 """
 
 import argparse
@@ -56,12 +52,12 @@ import clip
 import math
 
 
-# ============================================================
-# 模型定義
-# ============================================================
+# ==================================================
+# Model Definition
+# ==================================================
 
 class MLPProjector(nn.Module):
-    """MLP Projector（與 Source Model 訓練時完全相同的架構）"""
+    """MLP Projector (identical architecture to Source Model training)"""
     def __init__(self, in_dim=512, out_dim=512, hidden_dim=1024):
         super().__init__()
         self.layer1 = nn.Sequential(
@@ -79,27 +75,27 @@ class MLPProjector(nn.Module):
 
 class Augmentation(object):
     """
-    返回三個版本的圖片：
-    1. weak augmentation (Aug 1)：輕度幾何變換 → Teacher 輸入
-    2. strong augmentation (Aug 2)：SimCLR風格 (光影/模糊/幾何) → Student 輸入
-    3. original：只做 Resize + CenterCrop，用於 Pseudo Label 監控（訓練時不使用）
+    Return three versions of images:
+    1. weak augmentation (Aug 1): light geometric transformation → Teacher input
+    2. strong augmentation (Aug 2): SimCLR style (color/blur/geometry) → Student input
+    3. original: only Resize + CenterCrop, used for Pseudo Label monitoring (not used during training)
     """
     def __init__(self, resize_size=256, crop_size=224):
-        # 這是 OpenAI CLIP 官方標準的 Mean 和 Std，絕對不能用 ImageNet 的！
+        # OpenAI CLIP official standard Mean and Std, must not use ImageNet values
         self.normalize = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
                                  std=[0.26862954, 0.26130258, 0.27577711])
         ])
 
-        # Original: 完全對齊 CLIP 官方 preprocess（與提取 centroid 時一致）
-        # CLIP 官方使用 Resize(224) 而非 Resize((224, 224))，這會保持長寬比
+        # Original: fully aligned with CLIP official preprocess (consistent with centroid extraction)
+        # CLIP official uses Resize(224) instead of Resize((224, 224)), which preserves aspect ratio
         self.original = transforms.Compose([
-            transforms.Resize(crop_size, interpolation=transforms.InterpolationMode.BICUBIC),  # 短邊縮放
+            transforms.Resize(crop_size, interpolation=transforms.InterpolationMode.BICUBIC),  # short side scaling
             transforms.CenterCrop(crop_size)
         ])
 
-        # Weak: 輕度的幾何變換 (平移、旋轉、翻轉)，不改變光影
+        # Weak: light geometric transformation (translation, rotation, flip), no color changes
         self.weak = transforms.Compose([
             transforms.Resize((resize_size, resize_size), interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.RandomResizedCrop(crop_size, scale=(0.8, 1.0)),
@@ -107,7 +103,7 @@ class Augmentation(object):
             transforms.RandomRotation(15)
         ])
 
-        # Strong: SimCLR 風格 (加入強烈的光影擾動與模糊，強迫模型學習形狀輪廓)
+        # Strong: SimCLR style (strong color jitter and blur, forcing model to learn shape contours)
         self.strong = transforms.Compose([
             transforms.Resize((resize_size, resize_size), interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.RandomResizedCrop(crop_size, scale=(0.6, 1.0)),
@@ -122,46 +118,46 @@ class Augmentation(object):
         weak     = self.weak(x)
         strong   = self.strong(x)
         original = self.original(x)
-        # 最後統一套用 CLIP 的 Normalization
+        # Apply CLIP's Normalization uniformly at the end
         return self.normalize(weak), self.normalize(strong), self.normalize(original)
 
 
-# ============================================================
-# 工具函數
-# ============================================================
+# ==================================================
+# Utility Functions
+# ==================================================
 
 def smoothed_cross_entropy(logits, labels, num_classes=37, epsilon=0.1):
     """
-    epsilon=0.1 代表信任度為 90%，剩下的 10% 機率均分給其他類別。
-    這能極大程度防止模型對錯誤的 Pseudo-label 產生 Overfitting。
+    epsilon=0.1 means 90% confidence, remaining 10% probability distributed uniformly to other classes.
+    This greatly prevents overfitting to incorrect Pseudo-labels.
     """
     log_probs = F.log_softmax(logits, dim=1)
     with torch.no_grad():
-        # 建立 One-hot targets
+        # Create one-hot targets
         targets = torch.zeros_like(log_probs).scatter_(1, labels.unsqueeze(1), 1)
-        # 混入均勻分佈
+        # Mix in uniform distribution
         targets = (1 - epsilon) * targets + epsilon / num_classes
-    
-    # 計算 Soft Cross Entropy
+
+    # Compute Soft Cross Entropy
     loss = (-targets * log_probs).sum(dim=1).mean()
     return loss
 
 def load_clip_to_cpu(backbone):
-    """載入 CLIP 模型（CPU 版，後續移至 GPU）"""
+    """Load CLIP model (CPU version, will be moved to GPU later)"""
     model, _ = clip.load(backbone, device="cpu",
                          download_root=os.path.expanduser("~/.cache/clip"))
     return model
 
 
 def op_copy(optimizer):
-    """記錄初始學習率，供 lr_scheduler 使用"""
+    """Record initial learning rates for lr_scheduler"""
     for param_group in optimizer.param_groups:
         param_group['lr0'] = param_group['lr']
     return optimizer
 
 
 def lr_scheduler(optimizer, iter_num, max_iter, gamma=10, power=0.75):
-    """反向衰減學習率排程器"""
+    """Inverse decay learning rate scheduler"""
     decay = (1 + gamma * iter_num / max_iter) ** (-power)
     for param_group in optimizer.param_groups:
         param_group['lr']           = param_group['lr0'] * decay
@@ -173,8 +169,8 @@ def lr_scheduler(optimizer, iter_num, max_iter, gamma=10, power=0.75):
 
 def get_clip_preprocess_transforms(crop_size=224):
     """
-    返回 CLIP 官方 preprocess 的 Resize + CenterCrop 部分（不含 ToTensor 和 Normalize）
-    用於 Augmentation 的 original 分支
+    Return CLIP official preprocess's Resize + CenterCrop part (without ToTensor and Normalize)
+    Used for Augmentation's original branch
     """
     return transforms.Compose([
         transforms.Resize(crop_size, interpolation=transforms.InterpolationMode.BICUBIC),
@@ -184,24 +180,24 @@ def get_clip_preprocess_transforms(crop_size=224):
 
 def generate_text_features(classnames_path, clip_model, device, template="a photo of a {}"):
     """
-    從 classname 檔案生成 CLIP Text Features
+    Generate CLIP Text Features from classname file
 
     Args:
-        classnames_path: 類別名稱檔案路徑（每行一個類別名稱）
-        clip_model:      已移至 device 的完整 CLIP 模型
-        device:          計算裝置字串
-        template:        提示詞模板，預設 "a photo of a {}"
+        classnames_path: Path to classname file (one per line)
+        clip_model:      Complete CLIP model already moved to device
+        device:          Computation device string
+        template:        Prompt template, default "a photo of a {}"
 
     Returns:
-        text_features: [C, 512] L2 正規化後的 Text Features (float32, on device)
-        classnames:    類別名稱 list
+        text_features: [C, 512] L2 normalized Text Features (float32, on device)
+        classnames:    List of class names
     """
     with open(classnames_path, 'r', encoding='utf-8') as f:
         classnames = [line.strip() for line in f if line.strip()]
 
-    print(f'生成 Text Features')
-    print(f'  - 類別數量  : {len(classnames)}')
-    print(f'  - 提示詞模板: "{template}"')
+    print(f'Generating Text Features')
+    print(f'  - Number of classes: {len(classnames)}')
+    print(f'  - Prompt template: "{template}"')
 
     clip_model.eval()
     with torch.no_grad():
@@ -210,16 +206,16 @@ def generate_text_features(classnames_path, clip_model, device, template="a phot
         text_features = clip_model.encode_text(tokens)        # [C, D]
         text_features = F.normalize(text_features.float(), dim=-1)
 
-    print(f'Text Features 生成完畢: shape = {text_features.shape}')
+    print(f'Text Features generation complete: shape = {text_features.shape}')
 
     return text_features, classnames
 
 
 def data_load(args, preprocess):
-    """載入資料集（Target 訓練 + 評估）
-    
+    """Load dataset (Target training + evaluation)
+
     Args:
-        preprocess: CLIP 官方的 preprocess（用於 test loader）
+        preprocess: CLIP official preprocess (used for test loader)
     """
     dsets       = {}
     dset_loaders = {}
@@ -230,14 +226,14 @@ def data_load(args, preprocess):
 
     root_path = f'data/{args.dset}/'
 
-    # 訓練 Loader：每個樣本回傳 (weak, strong, original) 三張增強圖
+    # Training Loader: each sample returns (weak, strong, original) three augmented images
     dsets["target"] = ImageList_idx(txt_tar, transform=Augmentation(), root=root_path)
     dset_loaders["target"] = DataLoader(
         dsets["target"], batch_size=train_bs, shuffle=True,
         num_workers=args.worker, drop_last=False
     )
 
-    # 測試 Loader：使用 CLIP 官方 preprocess（完全對齊 extract_class_centroid.py）
+    # Test Loader: use CLIP official preprocess (fully aligned with extract_class_centroid.py)
     dsets["test"] = ImageList_idx(txt_test, transform=preprocess, root=root_path)
     dset_loaders["test"] = DataLoader(
         dsets["test"], batch_size=train_bs * 3, shuffle=False,
@@ -249,17 +245,17 @@ def data_load(args, preprocess):
 
 def cal_acc(loader, netF, netP, class_centroids, target_global_mean, source_global_mean, args, flag=False):
     """
-    使用 Student Projector 評估準確率
+    Evaluate accuracy using Student Projector
 
     Args:
-        class_centroids: [C, D] 從 Source 資料集提取的類別中心特徵（已正規化）
-        target_global_mean: [1, D] Target 全域均值
-        source_global_mean: [1, D] Source 全域均值
+        class_centroids: [C, D] Class center features extracted from Source dataset (normalized)
+        target_global_mean: [1, D] Target global mean
+        source_global_mean: [1, D] Source global mean
     """
     netP.eval()
     clip_dtype = next(netF.parameters()).dtype
 
-    # 預計算置中後的 source centroids
+    # Pre-compute centered source centroids
     centered_source_centroids = F.normalize(class_centroids - source_global_mean, dim=-1)
 
     start_test = True
@@ -270,11 +266,11 @@ def cal_acc(loader, netF, netP, class_centroids, target_global_mean, source_glob
             inputs = data[0].cuda()
             labels = data[1]
 
-            feat_512  = netF(inputs.type(clip_dtype))       # [B, 512]，凍結
+            feat_512  = netF(inputs.type(clip_dtype))       # [B, 512], frozen
             feat_proj = netP(feat_512)                       # [B, 512]
             feat_norm = F.normalize(feat_proj, dim=-1)
 
-            # 【修改】使用全域置中的方式計算 logits
+            # Use global centering to compute logits
             centered_features = F.normalize(feat_norm - target_global_mean, dim=-1)
             outputs = args.centroid_logitScale * (centered_features @ centered_source_centroids.t())  # [B, C]
 
@@ -303,127 +299,32 @@ def cal_acc(loader, netF, netP, class_centroids, target_global_mean, source_glob
         return accuracy * 100, mean_ent
 
 
-def get_confidence_threshold(current_epoch, args, max_probs=None):
-    """
-    根據 epoch 動態計算 confidence threshold
-
-    訓練策略：
-      - Phase 1 (Epoch 0 ~ 14): 固定高門檻 0.9，暴力建錨
-      - Phase 2 (Epoch 15+): 餘弦退火，從 0.9 平滑降到 0.8，課程學習
-
-    Args:
-        current_epoch: 當前 epoch 數
-        args: 包含 max_epoch 等配置的參數對象
-        max_probs: (可選) [N] FloatTensor，用於動態 threshold 計算
-                   目前未使用，保留供未來擴展
-
-    Returns:
-        conf_threshold: float，當前的信心度門檻
-        threshold_mode: str，描述當前 threshold 模式（用於日誌顯示）
-    """
-    import math
-
-    # Phase 1: 暴力建錨 (Epoch 0 ~ 14)
-    if current_epoch < args.phase1_epoch:
-        conf_threshold = 0.9
-        threshold_mode = f"Fixed({conf_threshold})"
-
-    # Phase 2: 課程閾值退火 (Epoch 15 ~ max_epoch)
-    else:
-        # 計算 Phase 2 的進度 (0.0 到 1.0)
-        phase2_epochs = args.max_epoch - args.phase1_epoch
-        progress = (current_epoch - args.phase1_epoch) / phase2_epochs
-
-        # # 餘弦退火：從 0.9 (嚴格) 緩慢且平滑地降到 0.85 (寬容)
-        T_max = 0.9
-        T_min = 0.85
-        # conf_threshold = T_min + 0.5 * (T_max - T_min) * (1 + math.cos(math.pi * progress))
-        conf_threshold = 0.9
-        threshold_mode = f"Cosine({conf_threshold:.4f})"
-        # conf_threshold = 0.8
-        # threshold_mode = f"Fixed({conf_threshold})"
-
-    return conf_threshold, threshold_mode
-
-
-def get_loss_weights(current_epoch, args):
-    """
-    根據 epoch 動態計算各損失函數的權重
-
-    訓練策略：
-      - Phase 1 (Epoch 0 ~ 14): 快速拓荒階段
-        * CE Loss = args.cls_par (用於高信心樣本分類)
-        * Contrastive Loss = args.con_par (用於特徵對比學習)
-        * Propagation Loss = 0.0 (不使用軟知識蒸餾)
-        * Entropy Loss = args.ent_par (熵最小化 + diversity)
-
-      - Phase 2 (Epoch 15+): 穩定優化階段
-        * CE Loss = args.cls_par
-        * Contrastive Loss = args.con_par
-        * Propagation Loss = args.prop_par (啟用軟知識蒸餾)
-        * Entropy Loss = args.ent_par
-
-    Args:
-        current_epoch: 當前 epoch 數
-        args: 包含 cls_par, con_par, prop_par, ent_par 等配置的參數對象
-
-    Returns:
-        dict: 包含各損失權重和 phase 信息的字典
-            {
-                'cls_par': float,
-                'con_par': float,
-                'prop_par': float,
-                'ent_par': float,
-                'phase': str  # "Phase1" 或 "Phase2"
-            }
-    """
-    # Phase 1: 快速拓荒 (Epoch 0 ~ 14)
-    if current_epoch < args.phase1_epoch:
-        return {
-            'cls_par': args.cls_par,
-            'con_par': args.con_par,
-            'prop_par': 0.0,  # Phase 1 不使用 Propagation Loss
-            'ent_par': args.ent_par,
-            'phase': 'Phase1'
-        }
-
-    # Phase 2: 穩定優化 (Epoch 15+)
-    else:
-        return {
-            'cls_par': args.cls_par,
-            'con_par': args.con_par,
-            'prop_par': args.prop_par,  # Phase 2 啟用 Propagation Loss
-            'ent_par': args.ent_par,
-            'phase': 'Phase2'
-        }
-
-
 def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epoch=0):
     """
-    使用 Teacher Projector (EMA, eval mode) 產生全資料集的 Pseudo Labels
-    【注意】此函數現在只用於監控整體 Pseudo Label 質量，每個 Epoch 結束時調用一次
-    訓練時的 Pseudo Labels 是在每個 batch 即時計算的（在主訓練循環中）
+    Generate pseudo labels for the entire dataset using Teacher Projector (EMA, eval mode)
+    Note: This function is only used for monitoring overall Pseudo Label quality, called once per epoch
+    Training Pseudo Labels are computed in real-time for each batch (in main training loop)
 
-    修改：現在使用穩定的 Teacher 而非震盪的 Student
-    修改：使用 class_centroids（從 Source 提取的類別中心）而非 text features
-    修改：使用全域置中（Global Centering）+ logit_scale（和 plot_threshold_distribution.py 一致）
-    修改：支援動態 threshold（參考 C-SFDA，epoch >= 20 使用平均信心度）
+    Modified: Use stable Teacher instead of oscillating Student
+    Modified: Use class_centroids (class centers extracted from Source) instead of text features
+    Modified: Use global centering + logit_scale (consistent with plot_threshold_distribution.py)
+    Modified: Support dynamic threshold (reference C-SFDA)
 
     Args:
-        class_centroids: [C, D] 從 Source 資料集提取的類別中心特徵（已正規化）
-        current_epoch: 當前 epoch 數（用於決定使用固定或動態 threshold）
+        class_centroids: [C, D] Class center features extracted from Source (normalized)
+        current_epoch: Current epoch number
 
     Returns:
-        pseudo_labels : [N] (CPU LongTensor) 每個樣本的偽標籤
-        max_probs     : [N] (CPU FloatTensor) 最大 softmax 信心值
+        pseudo_labels : [N] (CPU LongTensor) Pseudo labels for each sample
+        max_probs     : [N] (CPU FloatTensor) Maximum softmax confidence values
     """
     netP_ema.eval()
     clip_dtype = next(netF.parameters()).dtype
 
-    # 第一輪：提取所有 Target 特徵（用於全域置中）
+    # First pass: extract all Target features (for global centering)
     all_features = []
     all_labels = []
-    
+
     with torch.no_grad():
         iter_test = iter(loader)
         for _ in range(len(loader)):
@@ -432,41 +333,38 @@ def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epo
             labels = data[1]
 
             feat_512  = netF(inputs.type(clip_dtype))
-            feat_proj = netP_ema(feat_512)  # 使用 Teacher EMA
+            feat_proj = netP_ema(feat_512)  # Use Teacher EMA
             feat_norm = F.normalize(feat_proj, dim=-1)
-            
+
             all_features.append(feat_norm.cpu())
             all_labels.append(labels)
-    
+
     all_features = torch.cat(all_features, dim=0)  # [N, D]
     all_labels = torch.cat(all_labels, dim=0)      # [N]
-    
-    # 【關鍵】使用全域置中（和 plot_threshold_distribution.py 完全相同）
+
+    # Use global centering (identical to plot_threshold_distribution.py)
     target_mean = all_features.mean(dim=0, keepdim=True)
     source_mean = class_centroids.mean(dim=0, keepdim=True).cpu()
-    
+
     centered_target = F.normalize(all_features - target_mean, dim=-1)
     centered_source = F.normalize(class_centroids.cpu() - source_mean, dim=-1)
 
-    # 【新增】根據 epoch 決定 logitScale（與訓練邏輯一致）
-    use_logit_scale = args.centroid_logitScale  # Phase 1: 11
+    # Use logitScale (consistent with training)
+    use_logit_scale = args.centroid_logitScale
 
-    # calculate Logits
+    # Calculate logits
     logits = use_logit_scale * (centered_target @ centered_source.T)  # [N, C]
 
-    # Softmax Turn Logits to probabiltiy
+    # Convert logits to probability
     all_probs = F.softmax(logits, dim=1)           # [N, C]
     max_probs, pseudo_labels = torch.max(all_probs, dim=1)  # [N]
 
-    # 【統一】使用統一的 threshold 計算函數
-    conf_threshold, threshold_mode = get_confidence_threshold(current_epoch, args, max_probs)
-
-    # 記錄統計資訊（使用當前實際的 threshold）
+    # Record statistics
     accuracy       = torch.sum(pseudo_labels.float() == all_labels.float()).item() / float(all_labels.size()[0])
-    reliable_ratio = (max_probs > conf_threshold).float().mean().item()
+    reliable_ratio = (max_probs > args.conf_thres).float().mean().item()
 
-    # 計算 reliable 樣本的 Purity（高信心樣本中真正正確的比例）
-    reliable_mask = max_probs > conf_threshold
+    # Compute purity for reliable samples
+    reliable_mask = max_probs > args.conf_thres
     if reliable_mask.sum() > 0:
         reliable_correct = torch.sum((pseudo_labels[reliable_mask].float() == all_labels[reliable_mask].float())).item()
         reliable_total = reliable_mask.sum().item()
@@ -475,22 +373,21 @@ def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epo
         reliable_purity = 0.0
 
     log_str = (
-        f'[Pseudo Label via Teacher Centroids + Global Centering] 準確率 = {accuracy * 100:.2f}%  |  '
+        f'[Pseudo Label via Teacher Centroids + Global Centering] Accuracy = {accuracy * 100:.2f}%  |  '
         f'logitScale={use_logit_scale}  |  '
-        f'Threshold={threshold_mode}\n'
-        f'  Reliable (conf > {conf_threshold:.4f}) = {reliable_ratio * 100:.2f}%  |  '
-        f'Reliable 樣本數 = {int((max_probs > conf_threshold).sum())}/{len(pseudo_labels)}  |  '
+        f'  Reliable (conf > {args.conf_thres:.4f}) = {reliable_ratio * 100:.2f}%  |  '
+        f'Reliable count = {int((max_probs > args.conf_thres).sum())}/{len(pseudo_labels)}  |  '
         f'Reliable Purity = {reliable_purity * 100:.2f}%'
     )
     args.out_file.write(log_str + '\n')
     args.out_file.flush()
     print(log_str)
 
-    # 返回統計信息（供 wandb 記錄使用）
+    # Return statistics for wandb logging
     stats = {
         'pseudo_label_accuracy': accuracy,
         'reliable_ratio': reliable_ratio,
-        'reliable_count': int((max_probs > conf_threshold).sum()),
+        'reliable_count': int((max_probs > args.conf_thres).sum()),
         'total_samples': len(pseudo_labels),
         'reliable_purity': reliable_purity,
     }
@@ -500,13 +397,13 @@ def obtain_label_clip(loader, netF, netP_ema, class_centroids, args, current_epo
 
 def compute_target_global_mean(netF, netP_C_ema, data_loader, clip_dtype):
     """
-    計算 Target 資料集的全域均值（使用當前的 Teacher ProjectorC_ema）
+    Compute global mean of Target dataset (using current Teacher ProjectorC_ema)
 
     Args:
-        netF: CLIP Visual Encoder（凍結）
-        netP_C_ema: Teacher ProjectorC（EMA）
+        netF: CLIP Visual Encoder (frozen)
+        netP_C_ema: Teacher ProjectorC (EMA)
         data_loader: Target data loader
-        clip_dtype: CLIP 模型的 dtype
+        clip_dtype: CLIP model dtype
 
     Returns:
         target_global_mean: [1, D] cuda tensor
@@ -521,7 +418,7 @@ def compute_target_global_mean(netF, netP_C_ema, data_loader, clip_dtype):
             _, _, inputs_origin = imgs
             inputs_origin = inputs_origin.cuda()
 
-            # 使用 weak augmentation
+            # Use weak augmentation
             feat_512 = netF(inputs_origin.type(clip_dtype))
             feat_projected = netP_C_ema(feat_512)
             feat_norm = F.normalize(feat_projected, dim=-1)
@@ -540,84 +437,76 @@ def print_args(args):
     return s
 
 
-# ============================================================
-# 主訓練函數
-# ============================================================
+# ==================================================
+# Main Training Function
+# ==================================================
 
 def train_target(args):
-    # =====================================================
-    # 載入並凍結 CLIP Visual Encoder（保留 preprocess）
-    # =====================================================
-    print(f'載入 CLIP Model: {args.net}')
+    # Load and freeze CLIP Visual Encoder
+    print(f'Loading CLIP Model: {args.net}')
     clip_model, preprocess = clip.load(args.net, device="cpu",
                                         download_root=os.path.expanduser("~/.cache/clip"))
     clip_model.float()
     clip_model = clip_model.cuda()
-    print(f'✅ 同時載入 CLIP 官方 preprocess（與 extract_class_centroid.py 完全一致）')
-    
-    # 載入資料集（使用 CLIP 官方 preprocess）
+    print(f'CLIP official preprocess loaded (consistent with extract_class_centroid.py)')
+
+    # Load dataset (using CLIP official preprocess)
     dset_loaders = data_load(args, preprocess)
 
-    netF = clip_model.visual       # 只取 Visual Encoder
+    netF = clip_model.visual       # Extract Visual Encoder only
     netF.eval()
     for param in netF.parameters():
         param.requires_grad = False
 
     clip_dtype = next(netF.parameters()).dtype
-    print(f'CLIP Visual Encoder 已載入並凍結 (eval mode)')
+    print(f'CLIP Visual Encoder loaded and frozen (eval mode)')
     print(f'  - dtype: {clip_dtype}')
 
-    # =====================================================
-    # 生成固定的 CLIP Text Features（用於訓練時的分類）
-    # =====================================================
-    text_features, classnames = generate_text_features(
-        classnames_path=args.classnames_path,
-        clip_model=clip_model,
-        device='cuda',
-        template="a photo of a {}"
-    )
-    text_features = text_features.cuda()   # [C, 512]，已 L2 正規化
-    text_norm     = F.normalize(text_features, dim=-1)
+    # Generate fixed CLIP Text Features
+    # text_features, classnames = generate_text_features(
+    #     classnames_path=args.classnames_path,
+    #     clip_model=clip_model,
+    #     device='cuda',
+    #     template="a photo of a {}"
+    # )
+    # text_features = text_features.cuda()   # [C, 512], L2 normalized
+    # text_norm     = F.normalize(text_features, dim=-1)
 
-    if len(classnames) != args.class_num:
-        raise ValueError(
-            f'class_num 不一致：classname 檔案有 {len(classnames)} 類，'
-            f'但 args.class_num = {args.class_num}，請確認設定。'
-        )
+    # if len(classnames) != args.class_num:
+    #     raise ValueError(
+    #         f'class_num mismatch: classname file has {len(classnames)} classes, '
+    #         f'but args.class_num = {args.class_num}, please verify.'
+    #     )
 
-    # =====================================================
-    # 載入 Class Centroids（用於 Pseudo Label 生成）
-    # =====================================================
-    print(f'\n載入 Class Centroids from: {args.centroid_path}')
+    # Load Class Centroids (for Pseudo Label generation)
+    print(f'\nLoading Class Centroids from: {args.centroid_path}')
     if not os.path.exists(args.centroid_path):
         raise FileNotFoundError(
-            f'找不到 Class Centroids 檔案：{args.centroid_path}\n'
-            f'請先執行 extract_class_centroid.py 從 Source 資料集提取類別中心。'
-        )
-    
-    centroid_data = torch.load(args.centroid_path)
-    class_centroids = centroid_data['centroids'].cuda()  # [C, 512]
-    print(f'✅ Class Centroids 載入完成: {class_centroids.shape}')
-    print(f'   來自類別數: {centroid_data.get("num_classes", "未知")}')
-    
-    if class_centroids.size(0) != args.class_num:
-        raise ValueError(
-            f'class_num 不一致：Centroid 檔案有 {class_centroids.size(0)} 類，'
-            f'但 args.class_num = {args.class_num}，請確認設定。'
+            f'Class Centroids file not found: {args.centroid_path}\n'
+            f'Please run extract_class_centroid.py first to extract class centers from Source dataset.'
         )
 
-    # =====================================================
-    # 初始化混合串聯 Projector 架構並載入 Source 預訓練權重
-    # =====================================================
-    print(f'初始化混合串聯 Projector 架構：')
-    print(f'  - ProjectorC：用於分類任務 (CE/Prop/IM Loss)')
-    print(f'  - ProjectorH：串接在 ProjectorC 後，只用於對比學習 (Contrastive Loss)')
-    print(f'  - Teacher 只有 ProjectorC_ema，不需要 ProjectorH_ema')
+    centroid_data = torch.load(args.centroid_path)
+    class_centroids = centroid_data['centroids'].cuda()  # [C, 512]
+    print(f'Class Centroids loaded: {class_centroids.shape}')
+    print(f'   From {centroid_data.get("num_classes", "unknown")} classes')
+
+    if class_centroids.size(0) != args.class_num:
+        raise ValueError(
+            f'class_num mismatch: Centroid file has {class_centroids.size(0)} classes, '
+            f'but args.class_num = {args.class_num}, please verify.'
+        )
+
+    # Initialize mixed chained Projector architecture
+    print(f'Initializing mixed chained Projector architecture:')
+    print(f'  - ProjectorC: for classification tasks (CE/Prop/IM Loss)')
+    print(f'  - ProjectorH: chained after ProjectorC, only for contrastive learning (Contrastive Loss)')
+    print(f'  - Teacher only has ProjectorC_ema, no need for ProjectorH_ema')
 
     netP_C = MLPProjector(in_dim=512, out_dim=512, hidden_dim=1024).cuda()
     netP_H = MLPProjector(in_dim=512, out_dim=512, hidden_dim=1024).cuda()
 
-    # 優先使用直接指定路徑，否則從 output_dir_src 推導
+    # Prefer directly specified path, otherwise derive from output_dir_src
     if args.projector_path is not None:
         projector_path = args.projector_path
     else:
@@ -625,30 +514,26 @@ def train_target(args):
 
     if not osp.exists(projector_path):
         raise FileNotFoundError(
-            f'找不到 Projector 權重：{projector_path}\n'
-            f'請確認路徑或透過 --projector_path 直接指定。'
+            f'Projector checkpoint not found: {projector_path}\n'
+            f'Please verify the path or specify directly via --projector_path.'
         )
 
-    # 兩個 Projector 都載入相同的預訓練權重
+    # Load pre-trained weights for both Projectors
     state_dict = torch.load(projector_path)
     netP_C.load_state_dict(state_dict)
     netP_H.load_state_dict(state_dict)
     netP_C.train()
     netP_H.train()
-    print(f'✅ ProjectorC 與 ProjectorH 已載入：{projector_path}')
+    print(f'ProjectorC and ProjectorH loaded: {projector_path}')
 
-    # =====================================================
-    # 建立 Teacher Projector（EMA，只針對 ProjectorC）
-    # =====================================================
+    # Create Teacher Projector (EMA, only for ProjectorC)
     netP_C_ema = copy.deepcopy(netP_C)
     for param in netP_C_ema.parameters():
-        param.requires_grad = False   # Teacher 完全凍結，只透過 EMA 更新
+        param.requires_grad = False   # Teacher fully frozen, updated only through EMA
     netP_C_ema.eval()
-    print(f'Teacher ProjectorC (EMA) 已建立（不需要 ProjectorH_ema）')
+    print(f'Teacher ProjectorC (EMA) created (no need for ProjectorH_ema)')
 
-    # =====================================================
-    # 設定優化器（同時優化 ProjectorC + ProjectorH）
-    # =====================================================
+    # Set up optimizer (optimize ProjectorC + ProjectorH simultaneously)
     param_group = []
     for k, v in netP_C.named_parameters():
         param_group += [{'params': v, 'lr': args.lr}]
@@ -658,122 +543,118 @@ def train_target(args):
     optimizer = optim.SGD(param_group, momentum=0.9, weight_decay=1e-3, nesterov=True)
     optimizer = op_copy(optimizer)
 
-    print(f'優化器設定')
-    print(f'  - 可訓練模組         : ProjectorC + ProjectorH (串聯)')
-    print(f'  - 初始 LR            : {args.lr}')
-    print(f'  - EMA momentum       : {args.ema_m} (只更新 Teacher ProjectorC)')
-    print(f'  - conf_thres         : {args.conf_thres}')
-    print(f'  - centroid_logitScale: {args.centroid_logitScale}  (監控用 Centroids)')
-    print(f'\n  Loss 設定:')
-    print(f'  [A] CE Loss         : Phase1=1.0, Phase2=1.0  (高信心 Pseudo-label CE)')
-    print(f'  [B] Propagation Loss: Phase1=0.0, Phase2=0→1 (低信心 MSE to Teacher)')
-    print(f'  [C] IM Loss         : ent_par  = {args.ent_par}  (熵最小化 + diversity)')
-    print(f'  [D] Contrastive Loss: Phase1=1.0, Phase2=1.0  (SimCLR Weak+Strong, 動態熵權重)')
-    print(f'\n  訓練策略:')
-    print(f'  - Phase 1 (Epoch 0-19)  : CE=1.0, Con=1.0, Prop=0.0, logitScale=11, Threshold=固定({args.conf_thres})')
-    print(f'  - Phase 2 (Epoch 20+)   : CE=1.0, Con=1.0, Prop=0→1, logitScale=5, Threshold=動態平均（參考 C-SFDA）')
-    print(f'  - Pseudo Label 計算方式 : 每個 batch 即時計算 (用最新 Teacher EMA)')
-    print(f'\n  輸入圖像分配:')
-    print(f'  - CE / Propagation Loss : Strong augmented (Student)')
-    print(f'  - IM Loss               : Original image (Student)')
-    print(f'  - Contrastive Loss      : Weak + Strong (Student, 串聯至 ProjectorH)')
-    print(f'  - Teacher (Pseudo Label): Original image (所有 epoch，參考 C-SFDA)')
+    print(f'Optimizer configured')
+    print(f'  - Trainable modules: ProjectorC + ProjectorH (chained)')
+    print(f'  - Initial LR: {args.lr}')
+    print(f'  - EMA momentum: {args.ema_m} (only updates Teacher ProjectorC)')
+    print(f'  - conf_thres: {args.conf_thres}')
+    print(f'  - centroid_logitScale: {args.centroid_logitScale}  (for monitoring with Centroids)')
+    print(f'\n  Loss configuration:')
+    print(f'  [A] CE Loss: 1.0  (high confidence Pseudo-label CE)')
+    print(f'  [B] Propagation Loss: 0→1 (low confidence MSE to Teacher)')
+    print(f'  [C] IM Loss: {args.ent_par}  (entropy minimization + diversity)')
+    print(f'  [D] Contrastive Loss: 1.0  (SimCLR Weak+Strong, dynamic entropy weight)')
+    print(f'\n  Training strategy:')
+    print(f'  - Phase 2 only: CE=1.0, Con=1.0, Prop=0→1, logitScale=5, Threshold=dynamic average')
+    print(f'  - Pseudo Label calculation: in real-time for each batch (using latest Teacher EMA)')
+    print(f'\n  Image allocation:')
+    print(f'  - CE / Propagation Loss: Strong augmented (Student)')
+    print(f'  - IM Loss: Original image (Student)')
+    print(f'  - Contrastive Loss: Weak + Strong (Student, chained to ProjectorH)')
+    print(f'  - Teacher (Pseudo Label): Original image (all epochs, reference C-SFDA)')
 
-    # =====================================================
-    # Resume 訓練（如果指定了 resume_dir）
-    # =====================================================
+    # Resume training (if resume_dir specified)
     start_epoch_offset = 0
     if args.resume_dir is not None:
-        print(f'\n🔄 Resume 訓練模式啟動')
-        print(f'   從目錄載入模型: {args.resume_dir}')
+        print(f'\nResume training mode activated')
+        print(f'   Loading models from: {args.resume_dir}')
 
-        # 檢查檔案是否存在（混合架構：3 個模型）
+        # Check if files exist (mixed architecture: 3 models)
         projectorC_path = osp.join(args.resume_dir, "target_ProjectorC_best.pt")
         projectorH_path = osp.join(args.resume_dir, "target_ProjectorH_best.pt")
         projectorC_ema_path = osp.join(args.resume_dir, "target_ProjectorC_ema_current.pt")
 
         if not osp.exists(projectorC_path):
-            raise FileNotFoundError(f'找不到 ProjectorC checkpoint: {projectorC_path}')
+            raise FileNotFoundError(f'ProjectorC checkpoint not found: {projectorC_path}')
         if not osp.exists(projectorH_path):
-            raise FileNotFoundError(f'找不到 ProjectorH checkpoint: {projectorH_path}')
+            raise FileNotFoundError(f'ProjectorH checkpoint not found: {projectorH_path}')
         if not osp.exists(projectorC_ema_path):
-            raise FileNotFoundError(f'找不到 ProjectorC_ema checkpoint: {projectorC_ema_path}')
+            raise FileNotFoundError(f'ProjectorC_ema checkpoint not found: {projectorC_ema_path}')
 
-        # 載入模型權重（不需要 netP_H_ema）
+        # Load model weights (no need for netP_H_ema)
         netP_C.load_state_dict(torch.load(projectorC_path))
         netP_H.load_state_dict(torch.load(projectorH_path))
         netP_C_ema.load_state_dict(torch.load(projectorC_ema_path))
 
-        print(f'   ✅ ProjectorC 已載入: {projectorC_path}')
-        print(f'   ✅ ProjectorH 已載入: {projectorH_path}')
-        print(f'   ✅ ProjectorC_ema 已載入: {projectorC_ema_path}')
-        print(f'   (混合架構：不需要 ProjectorH_ema)')
-        print(f'   📍 起始 Epoch: {args.start_epoch}')
+        print(f'   ProjectorC loaded: {projectorC_path}')
+        print(f'   ProjectorH loaded: {projectorH_path}')
+        print(f'   ProjectorC_ema loaded: {projectorC_ema_path}')
+        print(f'   (mixed architecture: no need for ProjectorH_ema)')
+        print(f'   Starting Epoch: {args.start_epoch}')
 
         start_epoch_offset = args.start_epoch
 
         if args.con_par is not None:
-            print(f'   🎯 固定 Contrastive Loss 權重: {args.con_par}')
+            print(f'   Fixed Contrastive Loss weight: {args.con_par}')
 
     max_iter         = (args.max_epoch - args.start_epoch) * len(dset_loaders["target"])
     interval_iter    = max_iter // args.interval
     iter_num         = 0
 
     print(f'\nBatch size: {args.batch_size}')
-    print(f'Total iterations: {max_iter}, Pseudo-label 更新間隔: {interval_iter} iters')
+    print(f'Total iterations: {max_iter}, Pseudo-label update interval: {interval_iter} iters')
     print(f'Seed: {args.seed}')
-    print(f'📂 Target數據路徑: {args.t_dset_path}')
-    print(f'📂 Test數據路徑 : {args.test_dset_path}\n')
+    print(f'Data path (Target): {args.t_dset_path}')
+    print(f'Data path (Test): {args.test_dset_path}\n')
 
-    # =====================================================
-    # 初始化 wandb
-    # =====================================================
-    wandb.init(
-        project="CLIP-SFDA",
-        name=f"{args.dset}_s{args.s}t{args.t}_epoch{args.max_epoch}",
-        config={
-            "dataset": args.dset,
-            "source": args.s,
-            "target": args.t,
-            "max_epoch": args.max_epoch,
-            "batch_size": args.batch_size,
-            "learning_rate": args.lr,
-            "ema_momentum": args.ema_m,
-            "conf_threshold": args.conf_thres,
-            "centroid_logitScale": args.centroid_logitScale,
-            "ent_par": args.ent_par,
-            "seed": args.seed,
-        }
-    )
-    print(f'wandb initialized: {wandb.run.name}\n')
+    # Initialize wandb
+    if args.use_wandb:
+        wandb.init(
+            project="CLIP-SFDA",
+            name=f"{args.dset}_s{args.s}t{args.t}_epoch{args.max_epoch}",
+            config={
+                "dataset": args.dset,
+                "source": args.s,
+                "target": args.t,
+                "max_epoch": args.max_epoch,
+                "batch_size": args.batch_size,
+                "learning_rate": args.lr,
+                "ema_momentum": args.ema_m,
+                "conf_threshold": args.conf_thres,
+                "centroid_logitScale": args.centroid_logitScale,
+                "ent_par": args.ent_par,
+                "seed": args.seed,
+            }
+        )
+        print(f'wandb initialized: {wandb.run.name}\n')
+    else:
+        print(f'wandb disabled (use_wandb=False)\n')
 
-    # =====================================================
-    # 【新增】預計算 Source 全域均值（固定）和初始 Target 全域均值
-    # =====================================================
-    print(f'預計算全域均值用於全域置中...')
+    # Pre-compute Source global mean (fixed) and initial Target global mean
+    print(f'Pre-computing global means for global centering...')
 
-    # Source 全域均值（固定，整個訓練期間不變）
+    # Source global mean (fixed, unchanged during entire training)
     source_global_mean = class_centroids.mean(dim=0, keepdim=True)  # [1, D]
 
-    # 初始 Target 全域均值（使用初始的 Teacher）
+    # Initial Target global mean (using initial Teacher)
     target_global_mean = compute_target_global_mean(
         netF, netP_C_ema, dset_loaders["target"], clip_dtype
     )
 
-    # 預計算置中後的 source centroids（會在每個 batch 後更新）
+    # Pre-compute centered source centroids (will be updated after each batch)
     centered_source_centroids = F.normalize(class_centroids - source_global_mean, dim=-1)  # [C, D]
 
-    print(f'✅ 全域均值計算完成')
-    print(f'   Source 全域均值: {source_global_mean.shape}（固定）')
-    print(f'   Target 全域均值: {target_global_mean.shape}（初始值，每個 batch 後更新）')
-    print(f'   置中後 Source Centroids: {centered_source_centroids.shape}')
+    print(f'Global means computation complete')
+    print(f'   Source global mean: {source_global_mean.shape} (fixed)')
+    print(f'   Target global mean: {target_global_mean.shape} (initial, updated after each batch)')
+    print(f'   Centered Source Centroids: {centered_source_centroids.shape}')
 
-    # 初始化最佳準確率
+    # Initialize best accuracy
     acc_init = 0
 
-    # Epoch 追蹤變數
+    # Epoch tracking variables
     batches_per_epoch   = len(dset_loaders["target"])
-    current_epoch       = start_epoch_offset  # 從 resume 的 epoch 開始
+    current_epoch       = start_epoch_offset
     epoch_start_iter    = 0
     epoch_total_loss    = 0.0
     epoch_ce_loss       = 0.0
@@ -782,7 +663,7 @@ def train_target(args):
     epoch_contrast_loss = 0.0
     epoch_batches       = 0
 
-    # 建立初始進度條
+    # Create initial progress bar
     iter_test = iter(dset_loaders["target"])
     pbar      = tqdm(total=batches_per_epoch,
                      desc=f'Epoch {current_epoch+1}/{args.max_epoch}',
@@ -790,9 +671,7 @@ def train_target(args):
 
     while iter_num < max_iter:
 
-        # =================================================
-        # 取得 Batch（三種增強）
-        # =================================================
+        # Get batch (three augmentations)
         try:
             imgs, true_labels, tar_idx, path = next(iter_test)
         except StopIteration:
@@ -805,125 +684,80 @@ def train_target(args):
             iter_num += 1
             continue
 
-        # 【統一】使用統一的 threshold 和 logitScale 計算函數
-        conf_threshold, _ = get_confidence_threshold(current_epoch, args)
-
-        # # 根據 epoch 設定 logitScale（與 threshold 同步）
-        # if current_epoch < 15:
-        #     args.centroid_logitScale = 10.0  # Phase 1: 暴力建錨
-        # else:
-        #     args.centroid_logitScale = 10.0  # Phase 2: 維持不變，避免特徵休克
-
-        # =================================================
-        # 學習率排程 + 梯度清零
-        # =================================================
+        # Learning rate scheduling + gradient zeroing
         lr_scheduler(optimizer, iter_num=iter_num, max_iter=max_iter)
         optimizer.zero_grad()
 
-        # GPU 移動
+        # GPU transfer
         inputs_weak     = inputs_weak.cuda()
         inputs_strong   = inputs_strong.cuda()
-        inputs_original = inputs_original.cuda()  # IM Loss 需要使用 Original
+        inputs_original = inputs_original.cuda()
 
         if iter_num % 100 == 0:
             torch.cuda.empty_cache()
 
-        # --------------------------------------------------
-        # 特徵提取（CLIP Encoder 凍結，不計梯度）
-        # --------------------------------------------------
+        # Feature extraction (CLIP Encoder frozen, no gradients)
         with torch.no_grad():
-            # Student 用 Strong，Teacher 用 Weak，IM Loss 用 Original
+            # Student uses Strong, Teacher uses Weak, IM Loss uses Original
             feat_512_weak     = netF(inputs_weak.type(clip_dtype))      # [B, 512]
             feat_512_strong   = netF(inputs_strong.type(clip_dtype))    # [B, 512]
             feat_512_original = netF(inputs_original.type(clip_dtype))  # [B, 512]
 
-        # --------------------------------------------------
-        # Student: ProjectorC Forward (Strong aug) → CE / Propagation Loss
-        # --------------------------------------------------
-        feat_C_strong = netP_C(feat_512_strong)                           # [B, 512]，有梯度
+        # Student: ProjectorC Forward (Strong aug) -> CE / Propagation Loss
+        feat_C_strong = netP_C(feat_512_strong)                           # [B, 512], has gradient
         feat_stu_norm = F.normalize(feat_C_strong, dim=-1)
 
-        # 【修改】使用全域置中的方式計算 Student logits（與 Teacher 對齊）
+        # Use global centering to compute Student logits (aligned with Teacher)
         centered_student_features = F.normalize(feat_stu_norm - target_global_mean, dim=-1)  # [B, D]
         logits_student = args.centroid_logitScale * (centered_student_features @ centered_source_centroids.t())  # [B, C]
 
-        # --------------------------------------------------
-        # Student: ProjectorC Forward (Original aug) → IM Loss
-        # --------------------------------------------------
-        feat_C_original = netP_C(feat_512_original)                       # [B, 512]，有梯度
+        # Student: ProjectorC Forward (Original aug) -> IM Loss
+        feat_C_original = netP_C(feat_512_original)                       # [B, 512], has gradient
         feat_orig_norm  = F.normalize(feat_C_original, dim=-1)
 
-        # 【修改】使用全域置中的方式計算 Original logits
+        # Use global centering to compute Original logits
         centered_original_features = F.normalize(feat_orig_norm - target_global_mean, dim=-1)  # [B, D]
         logits_original = args.centroid_logitScale * (centered_original_features @ centered_source_centroids.t())  # [B, C]
 
-        # --------------------------------------------------
-        # Student: ProjectorC → ProjectorH (Weak + Strong) → Contrastive Loss
-        # --------------------------------------------------
+        # Student: ProjectorC -> ProjectorH (Weak + Strong) -> Contrastive Loss
         feat_C_weak   = netP_C(feat_512_weak)                             # [B, 512]
-        feat_H_weak   = netP_H(feat_C_weak)                               # [B, 512]，串聯
-        feat_H_strong = netP_H(feat_C_strong)                             # [B, 512]，串聯（複用）
+        feat_H_weak   = netP_H(feat_C_weak)                               # [B, 512], chained
+        feat_H_strong = netP_H(feat_C_strong)                             # [B, 512], chained (reused)
 
-        # --------------------------------------------------
-        # Teacher: ProjectorC_ema Forward (Original) → 即時計算 Pseudo Labels
-        # --------------------------------------------------
-        # 所有 epoch 都使用 Original（無增強），Phase 2 切換 logitScale（參考 C-SFDA）
+        # Teacher: ProjectorC_ema Forward (Original) -> compute Pseudo Labels in real-time
+        # Use Original (no augmentation) for all epochs
         with torch.no_grad():
-            # 所有 epoch 都使用 Original image
             feat_tea_input = netP_C_ema(feat_512_original)                # [B, 512]
             feat_tea_norm = F.normalize(feat_tea_input, dim=-1)
 
-            # 【修改】使用 batch EMA 更新全域均值（避免每個 batch 遍歷整個 dataset）
+            # Update global mean with batch EMA (avoids scanning entire dataset each batch)
             batch_mean = feat_tea_norm.mean(dim=0, keepdim=True)
             target_global_mean = F.normalize(target_global_mean * args.ema_m + batch_mean * (1 - args.ema_m), dim=-1)
 
-            # 使用更新後的 target_global_mean 進行全域置中
+            # Use updated target_global_mean for global centering
             centered_batch_features = F.normalize(feat_tea_norm - target_global_mean, dim=-1)  # [B, D]
 
-            # 使用置中後的 source centroids 計算相似度（logitScale 根據 Phase 切換）
+            # Compute similarity using centered source centroids
             logits_teacher = args.centroid_logitScale * (centered_batch_features @ centered_source_centroids.t())  # [B, C]
 
-            # 【關鍵】即時計算當前 batch 的 Pseudo Labels
+            # Compute pseudo labels for current batch in real-time
             probs_teacher = F.softmax(logits_teacher, dim=1)              # [B, C]
             batch_max_probs, batch_pseudo_labels = torch.max(probs_teacher, dim=1)  # [B]
 
-            # 動態計算當前 batch 的熵權重（基於 Teacher 的最新預測）
+            # Compute entropy weight dynamically (based on latest Teacher predictions)
             entropy_batch = loss.Entropy(probs_teacher)                   # [B]
-            batch_mas     = 1.0 - torch.exp(-entropy_batch)               # [B]，高熵→高權重
+            batch_mas     = 1.0 - torch.exp(-entropy_batch)               # [B], high entropy->high weight
 
-        # --------------------------------------------------
-        # Confidence Mask（基於即時計算的 Pseudo Labels）
-        # --------------------------------------------------
-        # 【新增】Epoch >= 20 使用動態平均信心度作為 Threshold（參考 C-SFDA）
-        # if current_epoch +1 < args.phase1_epoch:
-        #     # Phase 1: 使用固定 threshold
-        #     conf_threshold = args.conf_thres
-        # else:
-        #     # Phase 2: 使用動態平均信心度（參考 C-SFDA）
-        #     current_batch_mean = batch_max_probs.mean()  # 當前 batch 的平均最大概率
-        #     # 最後加上 clamp 保護底線 (例如 0.5 或你設定的 conf_thres)
-        #     conf_threshold = torch.clamp(current_batch_mean, min=0.90).item()
+        # Confidence mask (based on real-time computed pseudo labels)
+        # High confidence (Reliable): direct CE Loss
+        reliable_mask = batch_max_probs > args.conf_thres   # [B] bool
 
-        # 1. 高信心 (Reliable)：直接做 CE Loss
-        reliable_mask = batch_max_probs > conf_threshold   # [B] bool
-
-        # 2. 低信心 (Unreliable)：所有非高信心樣本
+        # Low confidence (Unreliable): all non-high-confidence samples
         unreliable_mask = ~reliable_mask                   # [B] bool
-
-        # =================================================
-        # 【統一】使用統一的損失權重計算函數
-        # =================================================
-        loss_weights = get_loss_weights(current_epoch, args)
-        current_cls_par  = loss_weights['cls_par']
-        current_con_par  = loss_weights['con_par']
-        current_prop_par = loss_weights['prop_par']
-        current_ent_par  = loss_weights['ent_par']
 
         losses = torch.tensor(0.0).cuda()
 
-        # --------------------------------------------------
-        # [A] CE Loss：高信心 Pseudo-label 樣本
-        # --------------------------------------------------
+        # [A] CE Loss: high-confidence pseudo-label samples
         ce_loss = torch.tensor(0.0).cuda()
         reliable_count = reliable_mask.sum().item()
 
@@ -933,64 +767,56 @@ def train_target(args):
                 batch_pseudo_labels[reliable_mask],
                 num_classes=args.class_num,
                 epsilon=0.1
-            ) * current_cls_par
+            ) * args.cls_par
         losses += ce_loss
 
-        # --------------------------------------------------
-        # [B] Propagation Loss：低信心樣本靠近 Teacher logit 分布（MSE）
-        # --------------------------------------------------
+        # [B] Propagation Loss: low-confidence samples approach Teacher logit distribution (MSE)
         prop_loss = torch.tensor(0.0).cuda()
-        if unreliable_mask.sum() > 0 and current_prop_par > 0:
+        if unreliable_mask.sum() > 0 and args.prop_par > 0:
             prop_loss = F.mse_loss(
                 logits_student[unreliable_mask],
                 logits_teacher[unreliable_mask].detach()
-            ) * current_prop_par  # 使用動態調整的 prop_par
+            ) * args.prop_par
 
         losses += prop_loss
 
-        # --------------------------------------------------
-        # [C] Information Loss：熵最小化（全部樣本，使用 Original image）
-        # --------------------------------------------------
+        # [C] Information Loss: entropy minimization (all samples, using Original image)
         im_loss = torch.tensor(0.0).cuda()
         if args.ent:
-            softmax_out  = F.softmax(logits_original, dim=1)  # 改用 Original image 的 logits
+            softmax_out  = F.softmax(logits_original, dim=1)  # Use Original image logits
             entropy_loss = torch.mean(loss.Entropy(softmax_out))
             if args.gent:
                 msoftmax      = softmax_out.mean(dim=0)
                 gentropy_loss = torch.sum(-msoftmax * torch.log(msoftmax + args.epsilon))
                 entropy_loss  -= gentropy_loss
-            im_loss = entropy_loss * current_ent_par  # 使用動態權重
+            im_loss = entropy_loss * args.ent_par
         losses += im_loss
 
-        # --------------------------------------------------
-        # [D] Contrastive Loss：Weak + Strong 特徵的 SimCLR（加熵值權重）
-        # --------------------------------------------------
-        out_1 = F.normalize(feat_H_weak,   dim=-1)   # [B, 512]，經過 netP_C → netP_H
-        out_2 = F.normalize(feat_H_strong, dim=-1)   # [B, 512]，經過 netP_C → netP_H
+        # [D] Contrastive Loss: SimCLR on Weak + Strong features (with entropy weight)
+        out_1 = F.normalize(feat_H_weak,   dim=-1)   # [B, 512], through netP_C -> netP_H
+        out_2 = F.normalize(feat_H_strong, dim=-1)   # [B, 512], through netP_C -> netP_H
         out   = torch.cat([out_1, out_2], dim=0)      # [2B, 512]
 
-        # 相似度矩陣（去除對角線自我相似度）
+        # Similarity matrix (remove diagonal self-similarity)
         sim_matrix = torch.exp(torch.mm(out, out.t().contiguous()) / args.tt)  # [2B, 2B]
         diag_mask  = (torch.ones_like(sim_matrix) -
                       torch.eye(out.shape[0], device=sim_matrix.device)).bool()
         sim_matrix = sim_matrix.masked_select(diag_mask).view(out.shape[0], -1)  # [2B, 2B-1]
 
-        # 正樣本對（Weak → Strong 與 Strong → Weak）
+        # Positive pairs (Weak -> Strong and Strong -> Weak)
         pos_sim = torch.exp(torch.sum(out_1 * out_2, dim=-1) / args.tt)  # [B]
         pos_sim = torch.cat([pos_sim, pos_sim], dim=0)                    # [2B]
 
-        # 熵值加權（高熵樣本 → 需要更多對比監督）
+        # Entropy weighting (high entropy samples -> need more contrastive supervision)
         micro_mas = torch.cat([batch_mas, batch_mas])                     # [2B]
         contrast_loss = (-torch.log(pos_sim / sim_matrix.sum(dim=-1)) * micro_mas).mean()
-        contrast_loss = contrast_loss * current_con_par  # 使用動態調整的 con_par
+        contrast_loss = contrast_loss * args.con_par
         losses += contrast_loss
 
-        # --------------------------------------------------
-        # Backward
-        # --------------------------------------------------
+        # Backward pass
         losses.backward()
 
-        # 累積 Epoch 損失（for 結尾統計）
+        # Accumulate epoch loss (for end-of-epoch statistics)
         epoch_ce_loss       += ce_loss.item()
         epoch_prop_loss     += prop_loss.item()
         epoch_entropy_loss  += im_loss.item()
@@ -998,21 +824,15 @@ def train_target(args):
         epoch_total_loss    += losses.item()
         epoch_batches       += 1
 
-        # =================================================
-        # 更新 Student 參數
-        # =================================================
+        # Update Student parameters
         optimizer.step()
 
-        # =================================================
-        # EMA 更新 Teacher ProjectorC（只更新分類用 Projector）
-        # =================================================
+        # EMA update Teacher ProjectorC (only update classification projector)
         with torch.no_grad():
             for param_q, param_k in zip(netP_C.parameters(), netP_C_ema.parameters()):
                 param_k.data = param_k.data * args.ema_m + param_q.data * (1.0 - args.ema_m)
 
-        # =================================================
-        # 進度條更新
-        # =================================================
+        # Progress bar update
         pbar.update(1)
         pbar.set_postfix({
             'Total': f'{losses.item():.4f}',
@@ -1022,25 +842,22 @@ def train_target(args):
             'Con':   f'{contrast_loss.item():.4f}'
         })
 
-        # =================================================
-        # wandb 記錄 (每個 batch)
-        # =================================================
-        wandb.log({
-            'batch/total_loss': losses.item(),
-            'batch/ce_loss': ce_loss.item(),
-            'batch/prop_loss': prop_loss.item(),
-            'batch/entropy_loss': im_loss.item(),
-            'batch/contrast_loss': contrast_loss.item(),
-            'batch/reliable_count': reliable_count,
-            'batch/reliable_ratio': reliable_count / inputs_weak.size(0),
-            'batch/conf_threshold': conf_threshold,
-            'batch/lr': optimizer.param_groups[0]['lr'],
-            'iter': iter_num,
-        })
+        # wandb logging (per batch)
+        if args.use_wandb:
+            wandb.log({
+                'batch/total_loss': losses.item(),
+                'batch/ce_loss': ce_loss.item(),
+                'batch/prop_loss': prop_loss.item(),
+                'batch/entropy_loss': im_loss.item(),
+                'batch/contrast_loss': contrast_loss.item(),
+                'batch/reliable_count': reliable_count,
+                'batch/reliable_ratio': reliable_count / inputs_weak.size(0),
+                'batch/conf_threshold': args.conf_thres,
+                'batch/lr': optimizer.param_groups[0]['lr'],
+                'iter': iter_num,
+            })
 
-        # =================================================
-        # Epoch 結束：評估 + 儲存
-        # =================================================
+        # Epoch end: evaluation + save
         if (iter_num - epoch_start_iter + 1) % batches_per_epoch == 0:
             pbar.close()
 
@@ -1050,48 +867,36 @@ def train_target(args):
             avg_entropy  = epoch_entropy_loss  / epoch_batches if epoch_batches > 0 else 0
             avg_contrast = epoch_contrast_loss / epoch_batches if epoch_batches > 0 else 0
 
-            # 使用 ProjectorC（eval）評估準確率
+            # Evaluate accuracy using ProjectorC (eval)
             acc_s_te, _ = cal_acc(dset_loaders['test'], netF, netP_C,
                                   class_centroids, target_global_mean, source_global_mean, args,
                                   flag=False)
 
-            # 【監控】每個 Epoch 統計一次 Pseudo Label 質量（使用 Centroids）
+            # Monitor pseudo-label quality per epoch (using Centroids)
             pseudo_label_stats = None
-            if current_epoch % 1 == 0:  # 每個 epoch 都記錄
+            if current_epoch % 1 == 0:
                 _, _, pseudo_label_stats = obtain_label_clip(
                     dset_loaders['test'], netF, netP_C_ema, class_centroids, args, current_epoch
                 )
 
-            # 【統一】計算當前 epoch 的動態參數（用於日誌顯示）
-            conf_threshold, threshold_mode = get_confidence_threshold(current_epoch, args)
-            loss_weights = get_loss_weights(current_epoch, args)
-
-            # 取得實際使用的損失權重（根據 phase 動態調整）
-            current_cls_display  = loss_weights['cls_par']
-            current_con_display  = loss_weights['con_par']
-            current_prop_display = loss_weights['prop_par']
-            current_ent_display  = loss_weights['ent_par']
-            current_phase        = loss_weights['phase']
             teacher_logit_scale  = args.centroid_logitScale
 
             log_str = (
-                f'Epoch: {current_epoch+1}/{args.max_epoch}  |  Accuracy = {acc_s_te:.2f}%  |  {current_phase}\n'
+                f'Epoch: {current_epoch+1}/{args.max_epoch}  |  Accuracy = {acc_s_te:.2f}%  |\n'
                 f'  Avg Loss: {avg_total:.4f}  '
                 f'CE: {avg_ce:.4f}  '
                 f'Prop: {avg_prop:.4f}  '
                 f'Ent: {avg_entropy:.4f}  '
                 f'Con: {avg_contrast:.4f}\n'
-                f'  Loss Weights: cls={current_cls_display:.4f}, ent={current_ent_display:.4f}, '
-                f'con={current_con_display:.4f}, prop={current_prop_display:.4f}\n'
-                f'  Teacher Strategy: Aug=Original, logitScale={teacher_logit_scale}, Threshold={threshold_mode}'
+                f'  Loss Weights: cls={args.cls_par:.4f}, ent={args.ent_par:.4f}, '
+                f'con={args.con_par:.4f}, prop={args.prop_par:.4f}\n'
+                f'  Teacher Strategy: Aug=Original, logitScale={teacher_logit_scale}, Threshold={args.conf_thres}'
             )
             print(log_str)
             args.out_file.write(log_str + '\n')
             args.out_file.flush()
 
-            # =================================================
-            # wandb 記錄 (每個 epoch)
-            # =================================================
+            # wandb logging (per epoch)
             epoch_log = {
                 'epoch/total_loss': avg_total,
                 'epoch/CE_loss': avg_ce,
@@ -1103,7 +908,7 @@ def train_target(args):
                 'epoch': current_epoch + 1,
             }
 
-            # 如果有 pseudo label 統計資訊，添加到 wandb
+            # Add pseudo label statistics if available
             if pseudo_label_stats is not None:
                 epoch_log.update({
                     'epoch/pseudo_label_accuracy': pseudo_label_stats['pseudo_label_accuracy'] * 100,
@@ -1113,9 +918,10 @@ def train_target(args):
                     'epoch/total_samples': pseudo_label_stats['total_samples'],
                 })
 
-            wandb.log(epoch_log)
+            if args.use_wandb:
+                wandb.log(epoch_log)
 
-            # 儲存 Current Model（每個 Epoch 覆蓋）
+            # Save current model (overwrite each epoch)
             torch.save(netP_C.state_dict(),
                        osp.join(args.output_dir, "target_ProjectorC_current.pt"))
             torch.save(netP_H.state_dict(),
@@ -1123,7 +929,7 @@ def train_target(args):
             torch.save(netP_C_ema.state_dict(),
                        osp.join(args.output_dir, "target_ProjectorC_ema_current.pt"))
 
-            # 儲存 Best Model（準確率創歷史新高時）
+            # Save best model (when accuracy reaches new high)
             if acc_s_te >= acc_init:
                 acc_init = acc_s_te
                 torch.save(netP_C.state_dict(),
@@ -1132,9 +938,9 @@ def train_target(args):
                            osp.join(args.output_dir, "target_ProjectorH_best.pt"))
                 torch.save(netP_C_ema.state_dict(),
                            osp.join(args.output_dir, "target_ProjectorC_ema_best.pt"))
-                print(f'✨ New best accuracy: {acc_s_te:.2f}%，已儲存 Best Model')
+                print(f'New best accuracy: {acc_s_te:.2f}%, Best Model Saved')
 
-            # 重置 Epoch 追蹤變數
+            # Reset epoch tracking variables
             current_epoch       += 1
             epoch_start_iter     = iter_num + 1
             epoch_total_loss    = 0.0
@@ -1151,109 +957,107 @@ def train_target(args):
 
         iter_num += 1
 
-    # 關閉最後一個進度條
+    # Close last progress bar
     if 'pbar' in locals():
         pbar.close()
 
-    # 關閉 wandb
-    wandb.finish()
-    print('✅ wandb run finished')
+    # Close wandb
+    if args.use_wandb:
+        wandb.finish()
+        print('wandb run finished')
 
     return netP_C, netP_H, netP_C_ema
 
 
-# ============================================================
-# 主程式入口
-# ============================================================
-
+# Main program entry
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='CLIP Projector EMA SFDA')
 
-    # 基本設定
+    # Basic configuration
     parser.add_argument('--gpu_id',   type=str, nargs='?', default='0',  help='device id to run')
     parser.add_argument('--s',        type=int,  default=0,   help='source domain index')
     parser.add_argument('--t',        type=int,  default=1,   help='target domain index')
-    parser.add_argument('--max_epoch',type=int,  default=5,   help='最大訓練 epoch 數')
-    parser.add_argument('--interval', type=int,  default=20,  help='每隔幾個 interval 更新一次 pseudo-label')
+    parser.add_argument('--max_epoch',type=int,  default=5,   help='max training epochs')
+    parser.add_argument('--interval', type=int,  default=20,  help='pseudo-label update interval')
     parser.add_argument('--batch_size',type=int, default=64)
     parser.add_argument('--worker',   type=int,  default=4)
     parser.add_argument('--seed',     type=int,  default=2022)
 
-    # 資料集
+    # Dataset
     parser.add_argument('--dset', type=str, default='M58',
                         choices=['VISDA-C', 'office', 'office-home', 'office-caltech', 'M58'])
 
-    # CLIP 設定
+    # CLIP configuration
     parser.add_argument('--net',           type=str,   default='RN101',
-                        help='CLIP backbone（RN50、RN101、ViT-B/32 等）')
+                        help='CLIP backbone (RN50, RN101, ViT-B/32, etc.)')
     parser.add_argument('--centroid_logitScale',type=float, default=8.1,
-                        help='Centroid similarity 的 logit scale（用於 Pseudo Label 生成，建議與 plot 一致）')
+                        help='logit scale for centroid similarity (for pseudo label generation)')
     parser.add_argument('--classnames_path',type=str,
                         default='/mnt/backups/andycw/M58/classname37.txt',
-                        help='類別名稱檔案路徑（每行一個類別名稱）')
+                        help='Path to class names file (one per line)')
     parser.add_argument('--centroid_path',type=str,
-                        default='/mnt/backups/andycw/UDA-AI/class_centroids_37.pth',
-                        help='Class Centroids 檔案路徑（從 Source 提取的類別中心特徵）')
+                        default='/mnt/backups/andycw/UDA-AI/output/m58/PureCLIP_Source_Model/RN101_projector_originCLIP_ep50_LR0.01_37classes_Standalone/source_class_centroids.pth',
+                        help='Path to Class Centroids file (class centers extracted from Source)')
 
-    # Projector 路徑（直接指定可覆蓋 output_dir_src/source_P.pt）
+    # Projector path (direct path overrides output_dir_src/source_P.pt)
     parser.add_argument('--projector_path', type=str,
-                        default='/mnt/backups/andycw/CLIP/output/m58/PureCLIP_Source_Model/'
-                                'rn101_projector_originCLIP_ep50_LR0.01_randomAug_37classes/'
-                                'source_projector.pt',
-                        help='直接指定 Projector 預訓練權重路徑')
+                        default='/mnt/backups/andycw/UDA-AI/output/m58/PureCLIP_Source_Model/RN101_projector_originCLIP_ep50_LR0.01_37classes_Standalone/source_projector.pt',
+                        help='Direct path to Projector pre-trained weights')
 
     # EMA
     parser.add_argument('--ema_m', type=float, default=0.99,
-                        help='Teacher EMA momentum（越大 Teacher 越穩定）')
+                        help='Teacher EMA momentum (larger->more stable)')
 
-    # Loss 權重
+    # Loss weights
     parser.add_argument('--gent',     type=bool,  default=True,
-                        help='是否使用 diversity loss（IM Loss 的 gentropy 項）')
+                        help='Whether to use diversity loss (gentropy term of IM Loss)')
     parser.add_argument('--ent',      type=bool,  default=True,
-                        help='是否使用 Information Loss（熵最小化）')
+                        help='Whether to use Information Loss (entropy minimization)')
     parser.add_argument('--cls_par',  type=float, default=0.3,
-                        help='[A] CE Loss 權重')
+                        help='[A] CE Loss weight')
     parser.add_argument('--prop_par', type=float, default=0.5,
-                        help='[B] Propagation Loss 權重')
+                        help='[B] Propagation Loss weight')
     parser.add_argument('--ent_par',  type=float, default=1.0,
-                        help='[C] Information Loss 權重')
+                        help='[C] Information Loss weight')
 
-    # Contrastive Loss 溫度
+    # Contrastive Loss temperature
     parser.add_argument('--tt',       type=float, default=0.05,
-                        help='[D] Contrastive Loss temperature（SimCLR）')
+                        help='[D] Contrastive Loss temperature (SimCLR)')
 
-    # Pseudo-label 信心門檻
+    # Pseudo-label confidence threshold
     parser.add_argument('--conf_thres',type=float, default=0.5,
-                        help='Pseudo-label 信心門檻（> conf_thres 為 reliable）')
+                        help='Pseudo-label confidence threshold (> conf_thres = reliable)')
 
-    # 輸出路徑
+    # Output paths
     parser.add_argument('--output',     type=str, default='ckps/target/')
     parser.add_argument('--output_src', type=str, default='ckps/source/')
     parser.add_argument('--da',         type=str, default='uda',
                         choices=['uda', 'pda'])
 
-    # 其他
+    # Others
     parser.add_argument('--epsilon',            type=float, default=1e-5,
-                        help='Entropy 計算的數值穩定 epsilon')
+                        help='Epsilon for entropy calculation numerical stability')
     parser.add_argument('--lr',                 type=float, default=1e-3,
-                        help='初始學習率')
+                        help='Initial learning rate')
     parser.add_argument('--issave',             type=bool,  default=True)
 
-    # Resume 相關參數
+    # Resume parameters
     parser.add_argument('--resume_dir',         type=str,   default=None,
-                        help='Resume 訓練的模型目錄路徑（包含 _current.pt 檔案）')
+                        help='Model directory for resume training (containing _current.pt files)')
     parser.add_argument('--start_epoch',        type=int,   default=0,
-                        help='Resume 時的起始 epoch（通常從 log 中查看）')
-    
-    # 動態參數調整
+                        help='Starting epoch for resume (check log to find)')
+
+    # Dynamic parameter adjustment
     parser.add_argument('--con_par',            type=float, default=None,
-                        help='Contrastive Loss 的權重（如果指定則覆蓋原始計算）')
-    parser.add_argument('--phase1_epoch',    type=float, default=None,
-                        help='Phase 1 的 epoch 數（用於動態調整參數）')
+                        help='Contrastive Loss weight (if specified, overrides calculation)')
+
+    # wandb configuration
+    parser.add_argument('--use_wandb',          type=bool,  default=False,
+                        help='Whether to use wandb for logging')
 
     args = parser.parse_args()
 
-    # ===== 資料集對應設定 =====
+    # Dataset mapping configuration
     if args.dset == 'M58':
         names          = ['CAD_ratioFilter', 'Real_all_nobg']
         args.class_num = 37
@@ -1270,7 +1074,7 @@ if __name__ == "__main__":
         names          = ['amazon', 'caltech', 'dslr', 'webcam']
         args.class_num = 10
 
-    # ===== 環境與隨機種子 =====
+    # Environment and random seed
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     SEED = args.seed
     torch.manual_seed(SEED)
@@ -1278,7 +1082,7 @@ if __name__ == "__main__":
     np.random.seed(SEED)
     random.seed(SEED)
 
-    # ===== 資料路徑 =====
+    # Data paths
     folder = 'data/'
     if args.dset == 'M58':
         args.s_dset_path    = folder + args.dset + '/' + names[args.s] + '_37_list.txt'
@@ -1289,7 +1093,7 @@ if __name__ == "__main__":
         args.t_dset_path    = folder + args.dset + '/' + names[args.t] + '_list.txt'
         args.test_dset_path = folder + args.dset + '/' + names[args.t] + '_list.txt'
 
-    # ===== 輸出目錄 =====
+    # Output directory
     args.output_dir_src = osp.join(
         args.output_src, args.da, args.dset, names[args.s][0].upper()
     )
@@ -1304,7 +1108,7 @@ if __name__ == "__main__":
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # ===== 日誌檔案 =====
+    # Log file
     args.savename = (
         f'conf_{args.conf_thres}_cls_{args.cls_par}_prop_{args.prop_par}_ema_{args.ema_m}'
     )
